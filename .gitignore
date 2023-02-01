@@ -1,0 +1,8 @@
+*
+!.gitignore
+!*.py
+!*.cfg
+!*.txt
+!*.md
+!*.ipynb
+!*.yml
