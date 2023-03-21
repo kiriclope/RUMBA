@@ -87,11 +87,42 @@ def initialize():
     return
 
 def update_inputs():
+    inputs[0] *= EXP_DT_TAU_SYN[0]  # inputs from E 
+    inputs[1] *= EXP_DT_TAU_SYN[1]  # inputs from I
+
+    for i in range(N_NEURONS):
+        # Cij, j pres to i post
+        pres_E = Cij[i, :NE]
+        pres_I = Cij[i, NE:]
+        
+        # sum over presynatptic neurons
+        if i < NE:
+            inputs[0][i] += J[0][0] * np.sum(rates[pres_E])
+            inputs[1][i] += J[0][1] * np.sum(rates[pres_I])
+        else:
+            inputs[0][i] += J[1][0] * np.sum(rates[pres_E])
+            inputs[1][i] += J[1][1] * np.sum(rates[pres_I])
+    
+    net_inputs = ff_inputs + inputs[0] + inputs[1]
+    
+    return net_inputs 
+
+def update_rates():
+
+    rates[:NE] *= EXP_DT_TAU_MEM[0]
+    rates[NE:] *= EXP_DT_TAU_MEM[1]
+    
+    rates[:NE] += DT_TAU_MEM[0] * TF(net_inputs[:NE])
+    rates[NE:] += DT_TAU_MEM[1] * TF(net_inputs[NE:])
+   
+    return rates
+    
+def update_post_inputs():
     NE = int(Na[0])
     Jab = Jab
 
-    inputs[0] *= EXP_DT_TAU_SYN[0]  # inputs from pres E onto all
-    inputs[1] *= EXP_DT_TAU_SYN[1]  # inputs from pres I onto all
+    inputs[0] *= EXP_DT_TAU_SYN[0]  # inputs from E 
+    inputs[1] *= EXP_DT_TAU_SYN[1]  # inputs from I
 
     for j in np.where(spiked):
 

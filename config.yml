@@ -1,20 +1,23 @@
 DT: 0.1
-DURATION: 1.0
+DURATION: 65.0
 
-N: 1000
-K: 100
+T_STEADY: 5.0
 
-frac: [0.8, 0.2]
+N: 10000
+K: 1000
+
+frac: [1.0, 0.0]
 
 VL: [0., 0.]
 V_TH: [1., 1.]
 
 TAU_SYN: [3., 2., 3., 2.]
-TAU_MEM: [10., 10.]
+TAU_MEM: [20., 10.]
 
-Jab: [1., 2., 3., 4.]
-Iext: [1., 2.]
+GAIN: 1.0
+Jab: [0.44, -0.28, 0.67, -0.34]
+Iext: [0.25, 0.25]
 M0: 0.01
 
-STRUCTURE: N
-SIGMA: [0.25, 0.25]
+STRUCTURE: ring
+SIGMA: 0.25
