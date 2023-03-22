@@ -5,9 +5,9 @@ T_STEADY: 5.0
 
 filename: chaos
 N: 10000
-K: 1000
+K: 500
 
-frac: [1.0, 0.0]
+frac: [1., 0.]
 
 VL: [0., 0.]
 V_TH: [1., 1.]
@@ -17,8 +17,8 @@ TAU_MEM: [20., 10.]
 
 GAIN: 1.0
 Jab: [0.44, -0.28, 0.67, -0.34]
-Iext: [0.25, 0.25]
+Iext: [0.5, 0.25]
 M0: 0.01
 
-STRUCTURE: spec
-SIGMA: 40
+STRUCTURE: low_rank
+SIGMA: 20

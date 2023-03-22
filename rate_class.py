@@ -18,6 +18,7 @@ def read_df(filename):
         df = pd.concat(map(h5.get, h5.keys()), axis=-1)
     return df
 
+
 def create_df(step, rates, inputs):
     idx = np.arange(rates.shape[0])
     time = step * np.ones(rates.shape[0])
@@ -39,37 +40,54 @@ class Bunch(object):
     self.__dict__.update(adict)
 
 
+def theta_mat(theta):
+    theta_mat = np.zeros((theta.shape[0], theta.shape[0]))
+    for i in range(theta.shape[0]):
+        for j in range(theta.shape[0]):
+            theta_mat[i,j] = theta[i] - theta[j]
+
+    return theta_mat
+    
 # @jit
 def strided_method(ar):
-    a = np.concatenate((ar, ar[:-1]))
+    a = np.concatenate((ar, ar[1:]))
     L = len(ar)
     n = a.strides[0]
-    return np.lib.stride_tricks.as_strided(a[L - 1 :], (L, L), (-n, n))
+    return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
 
 
 # @jit(nopython=False)
 def generate_Cij(K, N, STRUCTURE=None, SIGMA=1):
 
-    Pij = 1 
+    Pij = 1.0
+    
     print('random connectivity')
-    if STRUCTURE is not None:
+    if STRUCTURE != 'None':
         theta = np.linspace(0.0, 2.0 * np.pi, N)
         # print('theta', theta.shape)
-
-        theta_ij = strided_method(theta)
+        theta_ij = strided_method(theta).T
+        # theta_ij = theta_mat(theta)
         cos_ij = np.cos(theta_ij)
         # print('cos', cos_ij.shape)
     
     if STRUCTURE == "ring":
         print('with strong cosine structure')
-        Pij = np.array(1 + SIGMA * cos_ij)
-
+        Pij = 1.0 + SIGMA * cos_ij
+        
     elif STRUCTURE == "spec":
         print('with weak cosine structure')
-        Pij = np.array(1 + SIGMA * cos_ij / np.sqrt(K) )
-        
-    Cij = np.random.rand(N, N) < K / N * Pij
+        Pij = 1.0 + SIGMA * cos_ij / np.sqrt(K)
 
+    elif STRUCTURE == "low_rank":
+        print('with weak low rank structure')
+        mean = [0, 0]
+        cov = [[1, 0], [0, 1]]
+        x = random.multivariate_normal(mean, cov, size=N).T
+        Pij = 1.0 + SIGMA * x[0] * x[1] / np.sqrt(K)
+
+        
+    Cij = np.random.rand(N, N) < (K / N) * Pij 
+    
     return 1.0*Cij
 
 
@@ -112,11 +130,11 @@ class Network:
 
         self.M0 = const.M0
 
-        self.Jab = np.array(const.Jab).reshape(2,2)
+        self.Jab = np.array(const.Jab, dtype='float32').reshape(2,2)
         self.Jab *= const.GAIN
 
-        self.Jab[0] *= self.DT_TAU_SYN[0] / np.sqrt(self.Ka[0])
-        self.Jab[1] *= self.DT_TAU_SYN[1] / np.sqrt(self.Ka[1])
+        self.Jab[:, 0] *= self.DT_TAU_SYN[0] / np.sqrt(self.Ka[0])
+        self.Jab[:, 1] *= self.DT_TAU_SYN[1] / np.sqrt(self.Ka[1])
 
         self.Jab[np.isinf(self.Jab)] = 0 
 
@@ -132,7 +150,7 @@ class Network:
 
         self.rates = np.zeros(self.N)
         self.inputs = np.zeros((2, self.N))
-        self.net_inputs = np.zeros(self.N)
+        # self.net_inputs = np.zeros(self.N)
 
         self.ff_inputs = np.ones(self.N)
         self.ff_inputs[:self.Na[0]] *= self.Iext[0]
@@ -149,16 +167,15 @@ class Network:
         NE = self.Na[0]
 
         self.inputs[0] *= self.EXP_DT_TAU_SYN[0]  # inputs from E
+        self.inputs[0] += np.dot(Cij[:, :NE], self.rates[:NE])
+        
         self.inputs[1] *= self.EXP_DT_TAU_SYN[1]  # inputs from I
-
-        self.inputs[0] += np.dot(Cij[:, :NE], self.rates[:NE]) 
         self.inputs[1] += np.dot(Cij[:, NE:], self.rates[NE:]) 
         
-        self.net_inputs = self.ff_inputs - self.inputs[0]
-        # self.net_inputs = self.ff_inputs + self.inputs[0] + self.inputs[1]
-
     def update_rates(self):
-        self.rates = TF(self.net_inputs)
+        net_inputs = self.ff_inputs - self.inputs[0]
+        # net_inputs = self.ff_inputs + self.inputs[0] + self.inputs[1]
+        self.rates = TF(net_inputs)
 
         # self.rates[:NE] *= self.EXP_DT_TAU_MEM[0]
         # self.rates[NE:] *= self.EXP_DT_TAU_MEM[1]
