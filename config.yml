@@ -3,6 +3,7 @@ DURATION: 65.0
 
 T_STEADY: 5.0
 
+filename: chaos
 N: 10000
 K: 1000
 
@@ -19,5 +20,5 @@ Jab: [0.44, -0.28, 0.67, -0.34]
 Iext: [0.25, 0.25]
 M0: 0.01
 
-STRUCTURE: ring
-SIGMA: 0.25
+STRUCTURE: spec
+SIGMA: 40
