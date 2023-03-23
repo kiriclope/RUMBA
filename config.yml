@@ -1,13 +1,18 @@
+verbose: 1
 DT: 0.1
-DURATION: 65.0
+DURATION: 15.0
 
 T_STEADY: 5.0
+T_WINDOW: 5.0
 
-filename: chaos
+FILE_NAME: chaos
+TF_NAME: TL
+
+N_POP: 1
 N: 10000
 K: 500
 
-frac: [1., 0.]
+frac: [.5, .5]
 
 VL: [0., 0.]
 V_TH: [1., 1.]
@@ -18,7 +23,8 @@ TAU_MEM: [20., 10.]
 GAIN: 1.0
 Jab: [0.44, -0.28, 0.67, -0.34]
 Iext: [0.5, 0.25]
-M0: 0.01
+M0: 0.001
 
-STRUCTURE: low_rank
+SEED: 10
+STRUCTURE: spec
 SIGMA: 20

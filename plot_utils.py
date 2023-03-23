@@ -25,61 +25,90 @@ def plot_con(Cij):
     ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
     ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
     ax_xy = fig.add_subplot(gs[0, 1])
-    
+
     ax.imshow(Cij, cmap='jet', aspect=1)
     ax.set_xlabel('Presynaptic')
     ax.set_ylabel('Postsynaptic')
-    
-    Kj = np.sum(Cij, axis=0)  # sum over pres 
+
+    Kj = np.sum(Cij, axis=0)  # sum over pres
     ax_histx.plot(Kj)
     ax_histx.set_xticklabels([])
     ax_histx.set_ylabel('$K_j$')
 
-    Ki = np.sum(Cij, axis=1)  # sum over pres 
+    Ki = np.sum(Cij, axis=1)  # sum over pres
     ax_histy.plot(Ki, np.arange(0, Ki.shape[0], 1))
-    ax_histy.set_yticklabels([]) 
+    ax_histy.set_yticklabels([])
     ax_histy.set_xlabel('$K_i$')
 
     con_profile(Cij, ax=ax_xy)
-    
+
+
 def con_profile(Cij, ax=None):
     diags = []
     for i in range(int(Cij.shape[0]/2)):
         diags.append(np.trace(Cij, offset=i))
-    
+
     diags = np.array(diags)
     if ax is None:
         plt.plot(diags)
     else:
         ax.plot(diags)
         ax.set_xticklabels([])
-        ax.set_yticklabels([])  
-   
+        ax.set_yticklabels([])
+
     plt.xlabel('Neuron #')
     plt.ylabel('K')
-    
-def lineplot(df):
+
+
+def line_rates(df):
     count=0
     while count < 10:
-        idx = np.random.randint(10000)        
+        idx = np.random.randint(10000)
         small_df = df[df.neurons==idx]
         sns.lineplot(data=small_df, x='time', y='rates', hue='neurons', legend=None)
         count+=1
 
-def histogram(df):
+    plt.xlabel('Rates (Hz)')
+
+def line_inputs(df):
+    idx = np.random.randint(10000)
+    small_df = df[df.neurons==idx]
+    sns.lineplot(data=small_df, x='time', y='h_E', hue='neurons', legend=None, color='r')
+    sns.lineplot(data=small_df, x='time', y='h_I', hue='neurons', legend=None, color='b')
+    plt.xlabel('Inputs')
+
+
+def hist_rates(df):
     mean_df = df.groupby('neurons').mean()
-    sns.distplot(mean_df.rates)
+    sns.histplot(mean_df, x=mean_df.rates, kde=True)
+    plt.xlabel('Rates (Hz)')
+
+
+def hist_inputs(df):
+    mean_df = df.groupby('neurons').mean()
+    fig, ax = plt.subplots()
+
+    # df_E = mean_df['ff'] + mean_df['h_E']
+    # sns.histplot(df_E, x=df_E, kde=True, color='r', ax=ax)
     
-def heatmap(df):    
-    df1 = df[['time','neurons','rates']] 
+    sns.histplot(mean_df, x='h_E', kde=True, color='r', ax=ax)
+    # sns.histplot(mean_df, x='h_I', kde=True, color='b', ax=ax)
+    
+    df_net = mean_df['ff'] + mean_df['h_E'] + mean_df['h_I'] 
+    sns.histplot(df_net, x=df_net, kde=True, color='k', ax=ax)
+    
+    plt.xlabel('Inputs')
+
+
+def heatmap(df):
+    df1 = df[['time','neurons','rates']]
     pt = pd.pivot_table(df1, values ='rates',index=['neurons'],columns='time')
     sns.heatmap(pt, cmap='jet')
 
+    
 def spatial_profile(df, window=10):
     mean_df = df.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
-        
-    print(array.shape)
 
     smooth = circcvl(array[:, 0], windowSize=window)
 
