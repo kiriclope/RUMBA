@@ -102,10 +102,12 @@ def hist_inputs(df):
 
 def heatmap(df):
     df1 = df[['time','neurons','rates']]
-    pt = pd.pivot_table(df1, values ='rates',index=['neurons'],columns='time')
-    sns.heatmap(pt, cmap='jet')
-
+    df1.time = df1.time.round(1)
     
+    pt = pd.pivot_table(df1, values ='rates',index=['neurons'],columns='time')
+    
+    sns.heatmap(pt, cmap='jet', yticklabels=False, vmax=15)
+
 def spatial_profile(df, window=10):
     mean_df = df.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()

@@ -1,30 +1,61 @@
 import numpy as np
-
 from time import perf_counter
 from yaml import safe_load
 from configparser import ConfigParser
 from tqdm import tqdm
 from scipy.special import erf
-from pandas import DataFrame, HDFStore
+from pandas import DataFrame, HDFStore, concat
+from numba import jit
 
-def create_df(time, idx, rates, ff_inputs, inputs):
+def nd_numpy_to_nested(X):
+    """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
+    into pandas DataFrame (with time series as pandas Series in cells)
+    Parameters
+    ----------
+    X : NumPy ndarray, input
+    
+    Returns
+    -------
+    pandas DataFrame
+    """
+    print(X.shape)
+    
+    variables = ['time','neurons', 'rates', 'ff', 'h_E', 'h_I']
+    df = DataFrame()
+    
+    for i_time in range(X.shape[0]):
+        for i_neuron in range(X.shape[-1]):
+            df_i = DataFrame( data[i_time, i_neuron], columns = ['rates', 'ff', 'h_E', 'h_I'])
+        df_i['time'] = i_time
+            df_i['neurons'] = i_neuron
+        
+        df = concat(df, df_i)
+        
+    print(df)
+    
+    return df
 
-    data = np.vstack((time, idx, rates, ff_inputs, inputs))
+def create_df(data):
+
+    print(data.shape)
     df = DataFrame(data.T,
         columns=['time','neurons', 'rates', 'ff', 'h_E', 'h_I'])
+
+    df = DataFrame(['time','neurons', 'rates', 'ff', 'h_E', 'h_I'])
     # df = df.round(2)
     df = df.astype({"neurons": int})
 
     return df
 
 
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def TF(x, tfname='TL'):
     if tfname=='TL':
         return x * (x > 0.0)
-    elif tfname=='Sig':
-        return 0.5 * (1.0 + erf( x / np.sqrt(2.0)))
-    elif tfname=='LIF':
-        return - 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)
+    # elif tfname=='Sig':
+    #     return 0.5 * (1.0 + erf( x / np.sqrt(2.0)))
+    # elif tfname=='LIF':
+    #     return - 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)
 
 
 class Bunch(object):
@@ -40,7 +71,7 @@ def theta_mat(theta):
 
     return theta_mat
 
-# @jit
+@jit(nopython=True, parallel=False, fastmath=True, cache=True)
 def strided_method(ar):
     a = np.concatenate((ar, ar[1:]))
     L = len(ar)
@@ -48,39 +79,78 @@ def strided_method(ar):
     return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
 
 
-# @jit(nopython=False)
-def generate_Cij(K, N, STRUCTURE=None, SIGMA=1, SEED=None):
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
 
-    Pij = 1.0
+    N = Na[0]+Na[1]
+    K = Ka[0]+Ka[1]
+    Pij = np.zeros((N,N), dtype=np.float32)
+    Cij = np.zeros((N,N), dtype=np.int32)
 
-    print('random connectivity')
+    # print('random connectivity')
     if STRUCTURE != 'None':
-        theta = np.linspace(0.0, 2.0 * np.pi, N)
+        theta = np.linspace(0.0, 2.0 * np.pi, Na[0])
+        theta = theta.astype(np.float32)
         # print('theta', theta.shape)
         theta_ij = strided_method(theta).T
         # theta_ij = theta_mat(theta)
         cos_ij = np.cos(theta_ij)
         # print('cos', cos_ij.shape)
+        Pij[:Na[0], :Na[0]] =  cos_ij
 
     if STRUCTURE == "ring":
         print('with strong cosine structure')
-        Pij = 1.0 + SIGMA * cos_ij
-
+        Pij[:Na[0], :Na[0]] = Pij[:Na[0], :Na[0]] * SIGMA
+        
     elif STRUCTURE == "spec":
         print('with weak cosine structure')
-        Pij = 1.0 + SIGMA * cos_ij / np.sqrt(K)
+        Pij[:Na[0], :Na[0]] = Pij[:Na[0], :Na[0]] * SIGMA / np.sqrt(K)
 
-    elif STRUCTURE == "low_rank":
-        print('with weak low rank structure')
-        mean = [0, 0]
-        cov = [[1, 0], [0, 1]]
-        rng = np.random.default_rng(seed=None)
-        ksi = rng.multivariate_normal(mean, cov, size=N).T
-        Pij = 1.0 + SIGMA * ksi[0] * ksi[1] / np.sqrt(K)
+    Pij = Pij + 1
+    # elif STRUCTURE == "low_rank":
+    #     print('with weak low rank structure')
+    #     mean = [0, 0]
+    #     cov = [[1, 0], [0, 1]]
+    #     # rng = np.random.default_rng(seed=None)
+    #     # ksi = rng.multivariate_normal(mean, cov, size=N).T
+    #     # ksi = np.random.multivariate_normal(mean, cov, size=N).T
+    #     # Pij = 1.0 + SIGMA * ksi[0] * ksi[1] / np.sqrt(K)
 
-    Cij = np.random.rand(N, N) < (K / N) * Pij
+    Cij = 1.0 * (np.random.rand(N, N) < (K / N) * Pij)
 
     return Cij
+
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_inputs(Cij, rates, inputs, Na, EXP_DT_TAU_SYN):
+    NE = Na[0]
+
+    inputs[0] = inputs[0] * EXP_DT_TAU_SYN[0]  # inputs from E
+    CaE = Cij[:, :NE]
+    rE = rates[:NE]
+    inputs[0] = inputs[0] + np.dot(CaE, rE)
+        
+    if Na[1]>0:
+        CaI = Cij[:, NE:]
+        rI = rates[NE:]
+        inputs[1] = inputs[1] * EXP_DT_TAU_SYN[1]  # inputs from I
+        inputs[1] = inputs[1] + np.dot(CaI, rI)
+
+    return inputs
+
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_rates(rates, inputs, ff_inputs, Na, TF_NAME):
+    NE = Na[0]
+    net_inputs = ff_inputs
+    
+    net_inputs = net_inputs + inputs[0]        
+    if Na[1]>0:
+        net_inputs = net_inputs + inputs[1]     
+        
+    rates = TF(net_inputs, TF_NAME)
+
+    return rates
 
 
 class Network:
@@ -88,6 +158,7 @@ class Network:
 
         const = Bunch(kwargs)
 
+        self.SAVE = const.SAVE
         self.verbose = const.verbose
         if self.verbose:
             print(kwargs.keys())
@@ -111,25 +182,25 @@ class Network:
         self.idx.astype(np.float32)
         self.ones_vec = np.ones((self.N,), dtype=np.float32) / self.N_STEPS
 
-        self.Na = [int(self.N * const.frac[0]), int(self.N * const.frac[1])]
-        self.Ka = [self.K * const.frac[0], self.K * const.frac[1]]
+        self.Na = np.array([int(self.N * const.frac[0]), int(self.N * const.frac[1])], dtype=np.int32)
+        self.Ka = np.array([self.K * const.frac[0], self.K * const.frac[1]], dtype=np.float32)
         
-        self.TAU_SYN = const.TAU_SYN        
+        self.TAU_SYN = const.TAU_SYN 
         self.TAU_MEM = const.TAU_MEM
 
-        self.EXP_DT_TAU_SYN = [
+        self.EXP_DT_TAU_SYN = np.array( [
             np.exp(-self.DT / self.TAU_SYN[0]),
             np.exp(-self.DT / self.TAU_SYN[1]),
-        ]
+        ], dtype=np.float32)
 
-        self.DT_TAU_SYN = [self.DT / self.TAU_SYN[0], self.DT / self.TAU_SYN[1]]
+        self.DT_TAU_SYN = np.array([self.DT / self.TAU_SYN[0], self.DT / self.TAU_SYN[1]], dtype=np.float32)
 
-        self.EXP_DT_TAU_MEM = [
+        self.EXP_DT_TAU_MEM = np.array([
             np.exp(-self.DT / self.TAU_MEM[0]),
             np.exp(-self.DT / self.TAU_MEM[1]),
-        ]
+        ], dtype=np.float32)
 
-        self.DT_TAU_MEM = [self.DT / self.TAU_MEM[0], self.DT / self.TAU_MEM[1]]
+        self.DT_TAU_MEM = np.array([self.DT / self.TAU_MEM[0], self.DT / self.TAU_MEM[1]], dtype=np.float32)
 
         self.M0 = const.M0
 
@@ -171,7 +242,6 @@ class Network:
         print('Iext', self.Iext)
         print('Jab', self.Jab.flatten())
 
-        print('saving data to', self.FILE_NAME + '.h5')
 
     def update_inputs(self, Cij):
         NE = self.Na[0]
@@ -192,7 +262,7 @@ class Network:
             net_inputs = net_inputs + self.inputs[1]        
         
         self.rates = TF(net_inputs, self.TF_NAME)
-
+        
         # self.rates[:NE] *= self.EXP_DT_TAU_MEM[0] # excitatory rates
         # self.rates[:NE] += self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.TF_NAME)
         
@@ -202,7 +272,7 @@ class Network:
         
     def run(self):
         NE = self.Na[0]
-        Cij = generate_Cij(self.K, self.N,
+        Cij = generate_Cij(self.Ka, self.Na,
             self.STRUCTURE, self.SIGMA, self.SEED)
 
         Cij = 1.0 * Cij
@@ -213,21 +283,32 @@ class Network:
             Cij[:NE, NE:] = Cij[:NE, NE:] * self.Jab[0][1]
             Cij[NE:, NE:] = Cij[NE:, NE:] * self.Jab[1][1]
 
-        Cij.astype(np.float32)
-        store = HDFStore(self.FILE_NAME + '.h5', 'w')
+        Cij = Cij.astype(np.float32)
+
+        # if self.SAVE:
+        #     print('saving data to', self.FILE_NAME + '.h5')
+        #     store = HDFStore(self.FILE_NAME + '.h5', 'w')
         self.print_params()
         
         running_step = 0
+        data = []
+        
         for step in tqdm(range(self.N_STEPS)):
             self.update_rates()
-            self.update_inputs(Cij)
-
+            # self.update_inputs(Cij)
+            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)            
+            self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.EXP_DT_TAU_SYN)
+            
             running_step += 1
-
+            
             if step >= self.N_STEADY:
                 time = step * self.ones_vec
-                df = create_df(time, self.idx, self.rates * 1000, self.ff_inputs, self.inputs)
-                store.append('data', df, format='table', data_columns=True)
+
+                data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)))
+                
+                # if self.SAVE:
+                #     df = create_df(time, self.idx, self.rates * 1000, self.ff_inputs, self.inputs)
+                #     store.append('data', df, format='table', data_columns=True)
 
                 if running_step >= self.N_WINDOW:
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
@@ -235,7 +316,13 @@ class Network:
                           np.round(np.mean(self.rates[NE:]) * 1000, 2))
                     running_step = 0
 
-        store.close()
+        if self.SAVE:
+            print('saving data to', self.FILE_NAME + '.h5')
+            store = HDFStore(self.FILE_NAME + '.h5', 'w')
+            # df = create_df(np.stack(data, axis=0))
+            df = nd_numpy_to_nested(np.stack( np.array(data).T, axis=0))
+            store.append('data', df, format='table', data_columns=True)
+            store.close()
 
         return self
 
