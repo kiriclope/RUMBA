@@ -2,6 +2,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
+from matplotlib.animation import FuncAnimation, PillowWriter
 import pandas as pd
 from scipy.ndimage.filters import gaussian_filter
 
@@ -102,12 +104,19 @@ def hist_inputs(df):
 
 def heatmap(df):
     df1 = df[['time','neurons','rates']]
-    df1.time = df1.time.round(1)
     
+    print(df1.head())
     pt = pd.pivot_table(df1, values ='rates',index=['neurons'],columns='time')
-    
-    sns.heatmap(pt, cmap='jet', yticklabels=False, vmax=15)
 
+    n_ticks = 10
+    xticks = []
+    yticks = []
+    # xticks = np.linspace(0, len(df1.time), n_ticks)
+    # yticks = np.linspace(0, len(df1.neurons), n_ticks)
+    
+    ax = sns.heatmap(pt, cmap='jet', xticklabels=xticks, yticklabels=yticks)
+
+    
 def spatial_profile(df, window=10):
     mean_df = df.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
@@ -117,3 +126,35 @@ def spatial_profile(df, window=10):
     plt.plot(smooth)
     plt.xlabel('Neuron #')
     plt.ylabel('Rate (Hz)')
+
+def animate(frame, frames, ax):
+    if frame==0:
+        ax.plot(frames[frame])
+        ax.set_xlabel('Neuron #')
+        ax.set_ylabel('Rate (Hz)')
+        
+    else:
+        ax.set_ydata(frames[frame])
+        
+    
+def animated_bump(df, window=250):
+
+    frames = []
+    n_frames = 10  # len(df.time.unique())
+    times = df.time.unique()
+    for frame in range(n_frames):
+        df_i = df[df.time==times[frame]].rates.to_numpy()        
+        smooth = circcvl(df_i, windowSize=window)
+        frames.append(smooth)
+    
+    fig, ax = plt.subplots()
+
+    anim = FuncAnimation(fig,
+        lambda i: animate(i, frames, ax),
+        frames=n_frames,
+        interval=0,
+        repeat=True,
+        cache_frame_data=False)
+    
+    plt.draw()
+    plt.show()

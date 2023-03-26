@@ -7,6 +7,7 @@ from scipy.special import erf
 from pandas import DataFrame, HDFStore, concat
 from numba import jit
 
+
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
     into pandas DataFrame (with time series as pandas Series in cells)
@@ -22,18 +23,19 @@ def nd_numpy_to_nested(X):
     
     variables = ['time','neurons', 'rates', 'ff', 'h_E', 'h_I']
     df = DataFrame()
-    
-    for i_time in range(X.shape[0]):
-        for i_neuron in range(X.shape[-1]):
-            df_i = DataFrame( data[i_time, i_neuron], columns = ['rates', 'ff', 'h_E', 'h_I'])
-        df_i['time'] = i_time
-            df_i['neurons'] = i_neuron
-        
-        df = concat(df, df_i)
+    idx = np.arange(0, X.shape[1], 1)
+    for i_time in range(X.shape[0]):            
+        df_i = DataFrame( X[i_time,:, 1:], columns = ['rates', 'ff', 'h_E', 'h_I'])
+        df_i['neurons'] = idx
+        df_i['time'] = X[i_time, 0, 0]
+
+        # print(df_i)
+        df = concat((df, df_i))
         
     print(df)
     
     return df
+
 
 def create_df(data):
 
@@ -303,8 +305,8 @@ class Network:
             
             if step >= self.N_STEADY:
                 time = step * self.ones_vec
-
-                data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)))
+                
+                data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
                 
                 # if self.SAVE:
                 #     df = create_df(time, self.idx, self.rates * 1000, self.ff_inputs, self.inputs)
@@ -316,12 +318,13 @@ class Network:
                           np.round(np.mean(self.rates[NE:]) * 1000, 2))
                     running_step = 0
 
-        if self.SAVE:
+        data = np.stack(np.array(data), axis=0)
+        self.df = nd_numpy_to_nested(data)
+        
+        if self.SAVE:                        
             print('saving data to', self.FILE_NAME + '.h5')
             store = HDFStore(self.FILE_NAME + '.h5', 'w')
-            # df = create_df(np.stack(data, axis=0))
-            df = nd_numpy_to_nested(np.stack( np.array(data).T, axis=0))
-            store.append('data', df, format='table', data_columns=True)
+            store.append('data', self.df, format='table', data_columns=True)
             store.close()
 
         return self
