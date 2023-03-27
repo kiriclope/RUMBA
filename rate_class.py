@@ -38,7 +38,6 @@ def nd_numpy_to_nested(X):
 
 
 def create_df(data):
-
     print(data.shape)
     df = DataFrame(data.T,
         columns=['time','neurons', 'rates', 'ff', 'h_E', 'h_I'])
@@ -65,13 +64,16 @@ class Bunch(object):
     self.__dict__.update(adict)
 
 
-def theta_mat(theta):
-    theta_mat = np.zeros((theta.shape[0], theta.shape[0]))
-    for i in range(theta.shape[0]):
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def theta_mat(theta, phi):
+    theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
+    
+    for i in range(phi.shape[0]):
         for j in range(theta.shape[0]):
-            theta_mat[i,j] = theta[i] - theta[j]
+            theta_mat[i, j] = phi[i] - theta[j]
 
     return theta_mat
+
 
 @jit(nopython=True, parallel=False, fastmath=True, cache=True)
 def strided_method(ar):
@@ -80,6 +82,38 @@ def strided_method(ar):
     n = a.strides[0]
     return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
 
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def generate_Cab(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
+
+    Pij = np.zeros((Na[1], Na[0]), dtype=np.float32)
+    Cij = np.zeros((Na[1], Na[0]), dtype=np.int32)
+    
+    if STRUCTURE != 'None':
+        theta = np.linspace(0.0, 2.0 * np.pi, Na[0])
+        theta = theta.astype(np.float32)
+
+        phi = np.linspace(0.0, 2.0 * np.pi, Na[1])
+        phi = phi.astype(np.float32)
+        
+        theta_ij = theta_mat(theta, phi)
+        print('theta', theta_ij.shape)
+        cos_ij = np.cos(theta_ij)
+        print('cos', cos_ij.shape)
+        Pij[:, :] = cos_ij
+        
+    if STRUCTURE == "ring":
+        print('with strong cosine structure')
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA)
+        
+    elif STRUCTURE == "spec":
+        print('with weak cosine structure')
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Ka[0])
+    
+    Pij[:, :] = Pij[:, :] + np.float32(1.0)
+    Cij = 1.0 * (np.random.rand(Na[1], Na[0]) < (Ka[0] / Na[0]) * Pij)
+
+    return Cij
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
@@ -98,7 +132,7 @@ def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
         # theta_ij = theta_mat(theta)
         cos_ij = np.cos(theta_ij)
         # print('cos', cos_ij.shape)
-        Pij[:Na[0], :Na[0]] =  cos_ij
+        Pij[:Na[0], :Na[0]] = cos_ij
 
     if STRUCTURE == "ring":
         print('with strong cosine structure')
@@ -207,6 +241,7 @@ class Network:
         self.M0 = const.M0
 
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(2,2)
+        self.GAIN = const.GAIN
         self.Jab *= const.GAIN
 
         self.Jab[:, 0] = self.Jab[:, 0] * self.DT_TAU_SYN[0] / np.sqrt(self.Ka[0])
@@ -305,14 +340,14 @@ class Network:
             
             if step >= self.N_STEADY:
                 time = step * self.ones_vec
-                
-                data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
-                
+                                
                 # if self.SAVE:
                 #     df = create_df(time, self.idx, self.rates * 1000, self.ff_inputs, self.inputs)
                 #     store.append('data', df, format='table', data_columns=True)
 
                 if running_step >= self.N_WINDOW:
+                    data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
+                    
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
                           'rates (Hz)', np.round(np.mean(self.rates[:NE]) * 1000, 2),
                           np.round(np.mean(self.rates[NE:]) * 1000, 2))
@@ -322,7 +357,7 @@ class Network:
         self.df = nd_numpy_to_nested(data)
         
         if self.SAVE:                        
-            print('saving data to', self.FILE_NAME + '.h5')
+            print('saving data to', self.FILE_NAME + '_' + str(self.GAIN) + '.h5')
             store = HDFStore(self.FILE_NAME + '.h5', 'w')
             store.append('data', self.df, format='table', data_columns=True)
             store.close()

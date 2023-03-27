@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import pandas as pd
 from scipy.ndimage.filters import gaussian_filter
 
-from decode import circcvl
+from decode import circcvl, decode_bump
 sns.set_context("poster")
 sns.set_style("ticks")
 plt.rc("axes.spines", top=False, right=False)
@@ -15,6 +15,7 @@ plt.rc("axes.spines", top=False, right=False)
 golden_ratio = (5**.5 - 1) / 2
 width = 7.5
 matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
+
 
 def plot_con(Cij):
 
@@ -114,7 +115,7 @@ def heatmap(df):
     # xticks = np.linspace(0, len(df1.time), n_ticks)
     # yticks = np.linspace(0, len(df1.neurons), n_ticks)
     
-    ax = sns.heatmap(pt, cmap='jet', xticklabels=xticks, yticklabels=yticks)
+    ax = sns.heatmap(pt, cmap='jet', vmax=15, xticklabels=xticks, yticklabels=yticks)
 
     
 def spatial_profile(df, window=10):
@@ -127,20 +128,23 @@ def spatial_profile(df, window=10):
     plt.xlabel('Neuron #')
     plt.ylabel('Rate (Hz)')
 
-def animate(frame, frames, ax):
-    if frame==0:
-        ax.plot(frames[frame])
-        ax.set_xlabel('Neuron #')
-        ax.set_ylabel('Rate (Hz)')
-        
-    else:
-        ax.set_ydata(frames[frame])
+
+def init(frames, ax):
+    line, = ax.plot(frames[0])
+    ax.set_xlabel('Neuron #')
+    ax.set_ylabel('Rate (Hz)')
+    ax.set_ylim([0, 3])
+
+    return line
+    
+def animate(frame, frames, line):
+    line.set_ydata(frames[frame])
         
     
 def animated_bump(df, window=250):
 
     frames = []
-    n_frames = 10  # len(df.time.unique())
+    n_frames = len(df.time.unique())
     times = df.time.unique()
     for frame in range(n_frames):
         df_i = df[df.time==times[frame]].rates.to_numpy()        
@@ -148,13 +152,66 @@ def animated_bump(df, window=250):
         frames.append(smooth)
     
     fig, ax = plt.subplots()
-
+    line = init(frames, ax)
+    
     anim = FuncAnimation(fig,
-        lambda i: animate(i, frames, ax),
+        lambda i: animate(i, frames, line),
         frames=n_frames,
-        interval=0,
+        interval=200,
         repeat=True,
         cache_frame_data=False)
     
     plt.draw()
-    plt.show()
+    # plt.show()
+
+    writergif = PillowWriter(fps=60)
+    anim.save('bump.gif', writer=writergif, dpi=150)
+
+    plt.close('all')
+    
+def line_phase(df):
+
+    times = df.time.unique()
+    n_times = len(times)
+    n_neurons = len(df.neurons.unique())
+
+    print(n_times, n_neurons)
+    
+    array = df.rates.to_numpy().reshape((n_times, n_neurons))
+    
+    print(array.shape)
+    m1, phase = decode_bump(array)
+    print(m1.shape, phase.shape)
+
+    phase *= 180.0 / np.pi 
+    width=7
+    fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
+
+    m0 = np.nanmean(array, -1)
+    ax[0].plot(times, m0) 
+    ax[0].set_xlabel('Time (ms)')
+    ax[0].set_ylabel('Population Rate (Hz)')
+    
+    ax[1].plot(times, m1/m0)
+    ax[1].set_xlabel('Time (ms)')
+    ax[1].set_ylabel('$\mathcal{F}^1 / \mathcal{F}^0$')
+
+    ax[2].plot(times, phase)
+    ax[2].set_yticks([-180, -90, 0, 90, 180])    
+    ax[2].set_xlabel('Time (ms)')
+    ax[2].set_ylabel('Phase (°)')
+
+    # fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
+
+    # ax[0].hist(array[-1])
+    # ax[0].set_xlabel('Population Rate (Hz)')
+    # ax[0].set_ylabel('Count')
+
+    # ax[1].hist(m1)
+    # ax[1].set_xlabel('$\mathcal{F}^1$')
+    # ax[1].set_ylabel('Count')
+
+    # ax[2].hist(phase)
+    # ax[2].set_xlabel('Phase')
+    # ax[2].set_ylabel('Count')
+    
