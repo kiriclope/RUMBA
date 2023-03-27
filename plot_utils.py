@@ -17,6 +17,14 @@ width = 7.5
 matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
 
 
+def get_df(filename):
+    df = pd.read_hdf(filename + '.h5', mode='r')
+    df_E = df[df.neurons<10000]
+    df_I = df[df.neurons>=10000]
+
+    return df_E, df_I
+
+
 def plot_con(Cij):
 
     fig = plt.figure(figsize=(13, 13))
@@ -133,7 +141,7 @@ def init(frames, ax):
     line, = ax.plot(frames[0])
     ax.set_xlabel('Neuron #')
     ax.set_ylabel('Rate (Hz)')
-    ax.set_ylim([0, 3])
+    ax.set_ylim([0, int(np.amax(frames))])
 
     return line
     
@@ -164,7 +172,7 @@ def animated_bump(df, window=250):
     plt.draw()
     # plt.show()
 
-    writergif = PillowWriter(fps=60)
+    writergif = PillowWriter(fps=n_frames)
     anim.save('bump.gif', writer=writergif, dpi=150)
 
     plt.close('all')

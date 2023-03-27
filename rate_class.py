@@ -84,16 +84,17 @@ def strided_method(ar):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
+def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None):
 
-    Pij = np.zeros((Na[1], Na[0]), dtype=np.float32)
-    Cij = np.zeros((Na[1], Na[0]), dtype=np.int32)
+    Pij = np.zeros((Na, Nb), dtype=np.float32)
+    Cij = np.zeros((Na, Nb), dtype=np.int32)
     
+    print('random connectivity')
     if STRUCTURE != 'None':
-        theta = np.linspace(0.0, 2.0 * np.pi, Na[0])
+        theta = np.linspace(0.0, 2.0 * np.pi, Nb)
         theta = theta.astype(np.float32)
 
-        phi = np.linspace(0.0, 2.0 * np.pi, Na[1])
+        phi = np.linspace(0.0, 2.0 * np.pi, Na)
         phi = phi.astype(np.float32)
         
         theta_ij = theta_mat(theta, phi)
@@ -108,12 +109,13 @@ def generate_Cab(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
         
     elif STRUCTURE == "spec":
         print('with weak cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Ka[0])
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
     
-    Pij[:, :] = Pij[:, :] + np.float32(1.0)
-    Cij = 1.0 * (np.random.rand(Na[1], Na[0]) < (Ka[0] / Na[0]) * Pij)
-
+    Pij[:, :] = Pij[:, :] + 1.0
+    Cij = (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
+    
     return Cij
+
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
@@ -201,7 +203,8 @@ class Network:
 
         self.FILE_NAME = const.FILE_NAME
         self.TF_NAME = const.TF_NAME
-        
+
+        self.RATE_DYN = const.RATE_DYN
         # SIMULATION
         self.DT = const.DT
         self.DURATION = float(const.DURATION)
@@ -209,6 +212,9 @@ class Network:
 
         self.N_STEADY = int(const.T_STEADY / self.DT)
         self.N_WINDOW = int(const.T_WINDOW / self.DT)
+
+        self.N_STIM_ON = int(const.T_STIM_ON / self.DT)
+        self.N_STIM_OFF = int(const.T_STIM_OFF / self.DT)
 
         # PARAMETERS
         self.N = int(const.N)
@@ -218,7 +224,7 @@ class Network:
         self.idx.astype(np.float32)
         self.ones_vec = np.ones((self.N,), dtype=np.float32) / self.N_STEPS
 
-        self.Na = np.array([int(self.N * const.frac[0]), int(self.N * const.frac[1])], dtype=np.int32)
+        self.Na = np.array([int(self.N * const.frac[0]), int(self.N * const.frac[1])], dtype=np.int64)
         self.Ka = np.array([self.K * const.frac[0], self.K * const.frac[1]], dtype=np.float32)
         
         self.TAU_SYN = const.TAU_SYN 
@@ -252,6 +258,9 @@ class Network:
         self.Iext = const.Iext
         self.Iext[0] *= np.sqrt(self.Ka[0]) * self.M0
         self.Iext[1] *= np.sqrt(self.Ka[0]) * self.M0
+
+        self.I0 = const.I0 * self.M0 * np.sqrt(self.Ka[0])
+        self.PHI0 = np.random.uniform(2*np.pi)
         
         self.SEED = const.SEED
         if self.SEED == 'None':
@@ -263,9 +272,9 @@ class Network:
         self.rates = np.zeros( (self.N,), dtype=np.float32)
         self.inputs = np.zeros((2, self.N), dtype=np.float32)
 
-        rng = np.random.default_rng()
-        self.rates[:self.Na[0]] = rng.normal(10, 1, self.Na[0])
-        self.rates[self.Na[0]:] = rng.normal(10, 1, self.Na[1])
+        # rng = np.random.default_rng()
+        # self.rates[:self.Na[0]] = rng.normal(10, 1, self.Na[0])
+        # self.rates[self.Na[0]:] = rng.normal(10, 1, self.Na[1])
         
         self.ff_inputs = np.ones((self.N,), dtype=np.float32)
         self.ff_inputs[:self.Na[0]] = self.ff_inputs[:self.Na[0]] * self.Iext[0]
@@ -297,54 +306,78 @@ class Network:
         net_inputs = net_inputs + self.inputs[0]        
         if self.Na[1]>0:
             net_inputs = net_inputs + self.inputs[1]        
+
+        if self.RATE_DYN==0:
+            self.rates = TF(net_inputs, self.TF_NAME)
+        else:
+            self.rates[:NE] = self.rates[:NE] * self.EXP_DT_TAU_MEM[0] # excitatory rates
+            self.rates[:NE] = self.rates[:NE] + self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.TF_NAME)
         
-        self.rates = TF(net_inputs, self.TF_NAME)
-        
-        # self.rates[:NE] *= self.EXP_DT_TAU_MEM[0] # excitatory rates
-        # self.rates[:NE] += self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.TF_NAME)
-        
-        # if self.Na[1]>0:
-        #     self.rates[NE:] *= self.EXP_DT_TAU_MEM[1]  # inhibitory rates
-        #     self.rates[NE:] += self.DT_TAU_MEM[1] * TF(net_inputs[NE:], self.TF_NAME)
-        
-    def run(self):
+            if self.Na[1]>0:
+                self.rates[NE:] = self.rates[NE:] * self.EXP_DT_TAU_MEM[1]  # inhibitory rates
+                self.rates[NE:] = self.rates[NE:] + self.DT_TAU_MEM[1] * TF(net_inputs[NE:], self.TF_NAME)
+
+    def perturb_inputs(self, step):
         NE = self.Na[0]
-        Cij = generate_Cij(self.Ka, self.Na,
-            self.STRUCTURE, self.SIGMA, self.SEED)
+        if step == self.N_STIM_ON and step < self.N_STIM_ON + 1:
+            print('CUE ON')
+            theta = np.linspace(0.0, 2.0 * np.pi, NE) 
+            self.ff_inputs[:NE] = self.ff_inputs[:NE] + self.I0 * (1.0 + np.cos(theta - self.PHI0) )
+    
+        if step == self.N_STIM_OFF and step < self.N_STIM_OFF + 1:
+            print('CUE OFF')
+            theta = np.linspace(0.0, 2.0 * np.pi, NE)
+            self.ff_inputs[:NE] = self.ff_inputs[:NE] - self.I0 * (1.0 + np.cos(theta - self.PHI0) )
+            
+    def generate_Cij(self):
+        NE = self.Na[0]        
+        Cij = np.zeros((self.N, self.N), dtype=np.float32)
 
-        Cij = 1.0 * Cij
-        Cij[:NE, :NE] = Cij[:NE, :NE] * self.Jab[0][0]
+        Cee = generate_Cab(self.Ka[0], self.Na[0], self.Na[0],
+            'spec', self.SIGMA, self.SEED)
+        Cij[:NE, :NE] = Cee * self.Jab[0][0]
+        del Cee
         
-        if self.Na[1]>0:        
-            Cij[NE:, :NE] = Cij[NE:, :NE] * self.Jab[1][0]
-            Cij[:NE, NE:] = Cij[:NE, NE:] * self.Jab[0][1]
-            Cij[NE:, NE:] = Cij[NE:, NE:] * self.Jab[1][1]
+        Cie = generate_Cab(self.Ka[0], self.Na[1], self.Na[0],
+            'spec', self.SIGMA, self.SEED)
+        Cij[NE:, :NE] = Cie * self.Jab[1][0]
+        del Cie
+        
+        Cei = generate_Cab(self.Ka[1], self.Na[0], self.Na[1],
+            'spec', 0.5 * self.SIGMA, self.SEED)
+        Cij[:NE, NE:] = Cei * self.Jab[0][1]
+        del Cei
 
+        Cii = generate_Cab(self.Ka[1], self.Na[1], self.Na[1],
+            'spec', self.SIGMA, self.SEED)
+        Cij[NE:, NE:] = Cii * self.Jab[1][1]
+        del Cii
+        
         Cij = Cij.astype(np.float32)
 
-        # if self.SAVE:
-        #     print('saving data to', self.FILE_NAME + '.h5')
-        #     store = HDFStore(self.FILE_NAME + '.h5', 'w')
+        return Cij
+    
+    def run(self):
+        NE = self.Na[0]        
+        Cij = self.generate_Cij()
+        
         self.print_params()
         
         running_step = 0
         data = []
         
         for step in tqdm(range(self.N_STEPS)):
+            self.perturb_inputs(step)
             self.update_rates()
             # self.update_inputs(Cij)
-            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)            
+            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME) 
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.EXP_DT_TAU_SYN)
             
             running_step += 1
             
             if step >= self.N_STEADY:
                 time = step * self.ones_vec
-                                
-                # if self.SAVE:
-                #     df = create_df(time, self.idx, self.rates * 1000, self.ff_inputs, self.inputs)
-                #     store.append('data', df, format='table', data_columns=True)
-
+                
                 if running_step >= self.N_WINDOW:
                     data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
                     
@@ -353,15 +386,16 @@ class Network:
                           np.round(np.mean(self.rates[NE:]) * 1000, 2))
                     running_step = 0
 
+        del Cij
         data = np.stack(np.array(data), axis=0)
         self.df = nd_numpy_to_nested(data)
         
         if self.SAVE:                        
             print('saving data to', self.FILE_NAME + '_' + str(self.GAIN) + '.h5')
-            store = HDFStore(self.FILE_NAME + '.h5', 'w')
+            store = HDFStore(self.FILE_NAME  + '_' + str(self.GAIN) + '.h5', 'w')
             store.append('data', self.df, format='table', data_columns=True)
             store.close()
-
+        
         return self
 
 
