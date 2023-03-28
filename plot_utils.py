@@ -141,7 +141,7 @@ def init(frames, ax):
     line, = ax.plot(frames[0])
     ax.set_xlabel('Neuron #')
     ax.set_ylabel('Rate (Hz)')
-    ax.set_ylim([0, int(np.amax(frames))])
+    ax.set_ylim([0, int(np.amax(frames)) + 1])
 
     return line
     

@@ -84,7 +84,7 @@ def strided_method(ar):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None):
+def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None, PHASE=0):
 
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.int32)
@@ -98,20 +98,32 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None):
         phi = phi.astype(np.float32)
         
         theta_ij = theta_mat(theta, phi)
-        print('theta', theta_ij.shape)
-        cos_ij = np.cos(theta_ij)
-        print('cos', cos_ij.shape)
-        Pij[:, :] = cos_ij
+        cos_ij = np.cos(theta_ij + PHASE)
         
-    if STRUCTURE == "ring":
+        if 'lateral' in STRUCTURE:
+            cos2_ij = np.cos(2.0 * theta_ij)
+            print('lateral')
+            Pij[:, :] = cos_ij + cos2_ij 
+        else:
+            Pij[:, :] = cos_ij 
+        
+    if "ring" in STRUCTURE:
         print('with strong cosine structure')
         Pij[:, :] = Pij[:, :] * np.float32(SIGMA)
         
-    elif STRUCTURE == "spec":
+    elif "spec" in STRUCTURE:
         print('with weak cosine structure')
         Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
-    
-    Pij[:, :] = Pij[:, :] + 1.0
+
+    elif "small" in STRUCTURE:
+        print('with very weak cosine structure')
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb
+        
+    elif "dense" in STRUCTURE:
+        print('with dense cosine structure')
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb * np.sqrt(Nb) 
+            
+    Pij[:, :] = Pij[:, :] + 1.0 
     Cij = (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
     
     return Cij
@@ -133,8 +145,10 @@ def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
         theta_ij = strided_method(theta).T
         # theta_ij = theta_mat(theta)
         cos_ij = np.cos(theta_ij)
+        cos2_ij = np.cos(2.0 * theta_ij)
+        
         # print('cos', cos_ij.shape)
-        Pij[:Na[0], :Na[0]] = cos_ij
+        Pij[:Na[0], :Na[0]] = cos_ij + cos2_ij
 
     if STRUCTURE == "ring":
         print('with strong cosine structure')
@@ -249,13 +263,15 @@ class Network:
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(2,2)
         self.GAIN = const.GAIN
         self.Jab *= const.GAIN
+        self.Iext = const.Iext
 
+        self.mf_rates = -np.dot(np.linalg.inv(self.Jab), self.Iext)
+ 
         self.Jab[:, 0] = self.Jab[:, 0] * self.DT_TAU_SYN[0] / np.sqrt(self.Ka[0])
         self.Jab[:, 1] = self.Jab[:, 1] * self.DT_TAU_SYN[1] / np.sqrt(self.Ka[1])
         
         self.Jab[np.isinf(self.Jab)] = 0        
         
-        self.Iext = const.Iext
         self.Iext[0] *= np.sqrt(self.Ka[0]) * self.M0
         self.Iext[1] *= np.sqrt(self.Ka[0]) * self.M0
 
@@ -272,9 +288,9 @@ class Network:
         self.rates = np.zeros( (self.N,), dtype=np.float32)
         self.inputs = np.zeros((2, self.N), dtype=np.float32)
 
-        # rng = np.random.default_rng()
-        # self.rates[:self.Na[0]] = rng.normal(10, 1, self.Na[0])
-        # self.rates[self.Na[0]:] = rng.normal(10, 1, self.Na[1])
+        rng = np.random.default_rng()
+        self.rates[:self.Na[0]] = rng.normal(5, 1, self.Na[0])
+        self.rates[self.Na[0]:] = rng.normal(10, 2, self.Na[1])
         
         self.ff_inputs = np.ones((self.N,), dtype=np.float32)
         self.ff_inputs[:self.Na[0]] = self.ff_inputs[:self.Na[0]] * self.Iext[0]
@@ -288,6 +304,7 @@ class Network:
         print('Iext', self.Iext)
         print('Jab', self.Jab.flatten())
 
+        print('MF Rates:', self.mf_rates)
 
     def update_inputs(self, Cij):
         NE = self.Na[0]
@@ -319,12 +336,12 @@ class Network:
 
     def perturb_inputs(self, step):
         NE = self.Na[0]
-        if step == self.N_STIM_ON and step < self.N_STIM_ON + 1:
+        if step == self.N_STIM_ON:
             print('CUE ON')
             theta = np.linspace(0.0, 2.0 * np.pi, NE) 
             self.ff_inputs[:NE] = self.ff_inputs[:NE] + self.I0 * (1.0 + np.cos(theta - self.PHI0) )
     
-        if step == self.N_STIM_OFF and step < self.N_STIM_OFF + 1:
+        if step == self.N_STIM_OFF:
             print('CUE OFF')
             theta = np.linspace(0.0, 2.0 * np.pi, NE)
             self.ff_inputs[:NE] = self.ff_inputs[:NE] - self.I0 * (1.0 + np.cos(theta - self.PHI0) )
@@ -339,17 +356,17 @@ class Network:
         del Cee
         
         Cie = generate_Cab(self.Ka[0], self.Na[1], self.Na[0],
-            'spec', self.SIGMA, self.SEED)
+            'None', self.SIGMA, self.SEED)
         Cij[NE:, :NE] = Cie * self.Jab[1][0]
         del Cie
         
         Cei = generate_Cab(self.Ka[1], self.Na[0], self.Na[1],
-            'spec', 0.5 * self.SIGMA, self.SEED)
+            'dense', 1.0, self.SEED, PHASE=np.pi)
         Cij[:NE, NE:] = Cei * self.Jab[0][1]
         del Cei
-
+        
         Cii = generate_Cab(self.Ka[1], self.Na[1], self.Na[1],
-            'spec', self.SIGMA, self.SEED)
+            'dense', 1.0, self.SEED)
         Cij[NE:, NE:] = Cii * self.Jab[1][1]
         del Cii
         
@@ -368,10 +385,10 @@ class Network:
         
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
-            self.update_rates()
-            # self.update_inputs(Cij)
-            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME) 
+            # self.update_inputs(Cij)            
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.EXP_DT_TAU_SYN)
+            self.update_rates()
+            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)
             
             running_step += 1
             

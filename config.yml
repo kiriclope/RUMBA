@@ -7,7 +7,7 @@ DURATION: 350.0
 T_STEADY: 100.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 150.0
+T_STIM_ON: 200.0
 T_STIM_OFF: 250.0
 I0: 0.1
 PHI0: None
@@ -21,15 +21,15 @@ K: 1000
 frac: [.5, .5]
 
 TAU_SYN: [3., 2., 3., 2.]
-RATE_DYN: 1
-TAU_MEM: [3., 2.]
-TAU_REF: [10., 10.]
+
+RATE_DYN: 0
+TAU_MEM: [20., 10.]
 
 GAIN: 1.0
-Jab: [0.44, -0.28, 0.67, -0.34]
-Iext: [0.5, 0.25]
+Jab: [0.5, -0.28, 0.67, -0.34]
+Iext: [0.35, 0.25]
 M0: 0.001
 
 SEED: 10
 STRUCTURE: spec
-SIGMA: 8.0
+SIGMA: 1.0
