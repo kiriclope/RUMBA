@@ -2,7 +2,7 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 350.0
+DURATION: 500.0
 
 T_STEADY: 100.0
 T_WINDOW: 10.0
@@ -21,15 +21,16 @@ K: 1000
 frac: [.5, .5]
 
 TAU_SYN: [3., 2., 3., 2.]
+THRESH: 50.0
 
-RATE_DYN: 0
-TAU_MEM: [20., 10.]
+RATE_DYN: 1
+TAU_MEM: [10., 5.]
 
 GAIN: 1.0
-Jab: [0.5, -0.28, 0.67, -0.34]
-Iext: [0.35, 0.25]
+Jab: [0.44, -0.28, 0.67, -0.34]
+Iext: [0.5, 0.25]
 M0: 0.001
 
 SEED: 10
 STRUCTURE: spec
-SIGMA: 1.0
+SIGMA: 5.0

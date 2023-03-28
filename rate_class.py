@@ -52,9 +52,10 @@ def create_df(data):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def TF(x, tfname='TL'):
     if tfname=='TL':
+        x[x>=50]==50
         return x * (x > 0.0)
     # elif tfname=='Sig':
-    #     return 0.5 * (1.0 + erf( x / np.sqrt(2.0)))
+    #     return 0.5 * (1.0 + erf(x / np.sqrt(2.0)))
     # elif tfname=='LIF':
     #     return - 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)
 
@@ -288,9 +289,9 @@ class Network:
         self.rates = np.zeros( (self.N,), dtype=np.float32)
         self.inputs = np.zeros((2, self.N), dtype=np.float32)
 
-        rng = np.random.default_rng()
-        self.rates[:self.Na[0]] = rng.normal(5, 1, self.Na[0])
-        self.rates[self.Na[0]:] = rng.normal(10, 2, self.Na[1])
+        # rng = np.random.default_rng()
+        # self.rates[:self.Na[0]] = rng.normal(5, 1, self.Na[0])
+        # self.rates[self.Na[0]:] = rng.normal(10, 2, self.Na[1])
         
         self.ff_inputs = np.ones((self.N,), dtype=np.float32)
         self.ff_inputs[:self.Na[0]] = self.ff_inputs[:self.Na[0]] * self.Iext[0]
@@ -354,21 +355,22 @@ class Network:
             'spec', self.SIGMA, self.SEED)
         Cij[:NE, :NE] = Cee * self.Jab[0][0]
         del Cee
+
+        if self.Na[1]>0:
+            Cie = generate_Cab(self.Ka[0], self.Na[1], self.Na[0],
+                'None', self.SIGMA, self.SEED)
+            Cij[NE:, :NE] = Cie * self.Jab[1][0]
+            del Cie
         
-        Cie = generate_Cab(self.Ka[0], self.Na[1], self.Na[0],
-            'None', self.SIGMA, self.SEED)
-        Cij[NE:, :NE] = Cie * self.Jab[1][0]
-        del Cie
+            Cei = generate_Cab(self.Ka[1], self.Na[0], self.Na[1],
+                'None', 1.0, self.SEED, PHASE=np.pi)
+            Cij[:NE, NE:] = Cei * self.Jab[0][1]
+            del Cei
         
-        Cei = generate_Cab(self.Ka[1], self.Na[0], self.Na[1],
-            'dense', 1.0, self.SEED, PHASE=np.pi)
-        Cij[:NE, NE:] = Cei * self.Jab[0][1]
-        del Cei
-        
-        Cii = generate_Cab(self.Ka[1], self.Na[1], self.Na[1],
-            'dense', 1.0, self.SEED)
-        Cij[NE:, NE:] = Cii * self.Jab[1][1]
-        del Cii
+            Cii = generate_Cab(self.Ka[1], self.Na[1], self.Na[1],
+                'None', 1.0, self.SEED)
+            Cij[NE:, NE:] = Cii * self.Jab[1][1]
+            del Cii
         
         Cij = Cij.astype(np.float32)
 
