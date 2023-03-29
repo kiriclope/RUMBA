@@ -82,28 +82,31 @@ def line_rates(df):
     plt.xlabel('Rates (Hz)')
 
 def line_inputs(df):
+    df1 = df[df.time>.8]
     idx = np.random.randint(10000)
-    small_df = df[df.neurons==idx]
+    small_df = df1[df.neurons==idx]
     sns.lineplot(data=small_df, x='time', y='h_E', hue='neurons', legend=None, color='r')
     sns.lineplot(data=small_df, x='time', y='h_I', hue='neurons', legend=None, color='b')
     plt.xlabel('Inputs')
 
 
 def hist_rates(df):
-    mean_df = df.groupby('neurons').mean()
+    df1 = df[df.time>.8]
+    mean_df = df1.groupby('neurons').mean()
     sns.histplot(mean_df, x=mean_df.rates, kde=True)
     plt.xlabel('Rates (Hz)')
 
 
 def hist_inputs(df):
-    mean_df = df.groupby('neurons').mean()
+    df1 = df[df.time>.8]
+    mean_df = df1.groupby('neurons').mean()
     fig, ax = plt.subplots()
 
-    # df_E = mean_df['ff'] + mean_df['h_E']
-    # sns.histplot(df_E, x=df_E, kde=True, color='r', ax=ax)
+    df_E = mean_df['ff'] + mean_df['h_E']
+    sns.histplot(df_E, x=df_E, kde=True, color='r', ax=ax)
     
-    sns.histplot(mean_df, x='h_E', kde=True, color='r', ax=ax)
-    # sns.histplot(mean_df, x='h_I', kde=True, color='b', ax=ax)
+    # sns.histplot(mean_df, x='h_E', kde=True, color='r', ax=ax)
+    sns.histplot(mean_df, x='h_I', kde=True, color='b', ax=ax)
     
     df_net = mean_df['ff'] + mean_df['h_E'] + mean_df['h_I'] 
     sns.histplot(df_net, x=df_net, kde=True, color='k', ax=ax)
@@ -127,7 +130,8 @@ def heatmap(df):
 
     
 def spatial_profile(df, window=10):
-    mean_df = df.groupby('neurons').mean()
+    df1 = df[df.time>0.8]
+    mean_df = df1.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
 
     smooth = circcvl(array[:, 0], windowSize=window)
@@ -200,9 +204,9 @@ def line_phase(df):
     ax[0].set_xlabel('Time (ms)')
     ax[0].set_ylabel('Population Rate (Hz)')
     
-    ax[1].plot(times, m1/m0)
+    ax[1].plot(times, m1)
     ax[1].set_xlabel('Time (ms)')
-    ax[1].set_ylabel('$\mathcal{F}^1 / \mathcal{F}^0$')
+    ax[1].set_ylabel('$\mathcal{F}^1$')
 
     ax[2].plot(times, phase)
     ax[2].set_yticks([-180, -90, 0, 90, 180])    

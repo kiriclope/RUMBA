@@ -49,11 +49,15 @@ def create_df(data):
     return df
 
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def TF(x, tfname='TL'):
+# @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def TF(x, thresh, tfname='TL',  gain=1.0):
     if tfname=='TL':
-        x[x>=50]==50
-        return x * (x > 0.0)
+        x_nthresh = x**2 * (x > 0) 
+        x_thresh = (x>=thresh) * (np.sqrt(gain * np.abs(x)) - np.sqrt(gain * thresh) + thresh**2 - x**2)
+        return  x_nthresh + x_thresh
+
+    # if tfname=='Sig':
+    #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
     # elif tfname=='Sig':
     #     return 0.5 * (1.0 + erf(x / np.sqrt(2.0)))
     # elif tfname=='LIF':
@@ -218,7 +222,8 @@ class Network:
 
         self.FILE_NAME = const.FILE_NAME
         self.TF_NAME = const.TF_NAME
-
+        self.TF_GAIN = const.TF_GAIN
+        
         self.RATE_DYN = const.RATE_DYN
         # SIMULATION
         self.DT = const.DT
@@ -259,6 +264,9 @@ class Network:
 
         self.DT_TAU_MEM = np.array([self.DT / self.TAU_MEM[0], self.DT / self.TAU_MEM[1]], dtype=np.float32)
 
+        self.THRESH_DYN = const.THRESH_DYN
+        self.THRESH = np.array(const.THRESH, dtype=np.float32)
+        
         self.M0 = const.M0
 
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(2,2)
@@ -297,6 +305,10 @@ class Network:
         self.ff_inputs[:self.Na[0]] = self.ff_inputs[:self.Na[0]] * self.Iext[0]
         self.ff_inputs[self.Na[0]:] = self.ff_inputs[self.Na[0]:] * self.Iext[1]
 
+        self.thresh = np.ones( (self.N,), dtype=np.float32) 
+        self.thresh[:self.Na[0]] = self.thresh[:self.Na[0]] * self.THRESH[0]
+        self.thresh[self.Na[0]:] = self.thresh[self.Na[1]:] * self.THRESH[1]
+            
     def print_params(self):
         print('Parameters:')
         print('N', self.N, 'Na', self.Na)
@@ -326,15 +338,19 @@ class Network:
             net_inputs = net_inputs + self.inputs[1]        
 
         if self.RATE_DYN==0:
-            self.rates = TF(net_inputs, self.TF_NAME)
+            self.rates = TF(net_inputs, self.thresh, self.TF_NAME, self.TF_GAIN)
         else:
             self.rates[:NE] = self.rates[:NE] * self.EXP_DT_TAU_MEM[0] # excitatory rates
-            self.rates[:NE] = self.rates[:NE] + self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.TF_NAME)
+            self.rates[:NE] = self.rates[:NE] + self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.thresh[:NE], self.TF_NAME, self.TF_GAIN)
         
             if self.Na[1]>0:
                 self.rates[NE:] = self.rates[NE:] * self.EXP_DT_TAU_MEM[1]  # inhibitory rates
-                self.rates[NE:] = self.rates[NE:] + self.DT_TAU_MEM[1] * TF(net_inputs[NE:], self.TF_NAME)
+                self.rates[NE:] = self.rates[NE:] + self.DT_TAU_MEM[1] * TF(net_inputs[NE:], self.thresh[NE:], self.TF_NAME, self.TF_GAIN)
 
+    def update_thresh(self):
+        self.thresh = self.thresh * self.EXP_DT_TAU_MEM[0] 
+        self.thresh = self.thresh + self.DT_TAU_MEM[0] * self.THRESH[0]
+        
     def perturb_inputs(self, step):
         NE = self.Na[0]
         if step == self.N_STIM_ON:
@@ -363,7 +379,7 @@ class Network:
             del Cie
         
             Cei = generate_Cab(self.Ka[1], self.Na[0], self.Na[1],
-                'None', 1.0, self.SEED, PHASE=np.pi)
+                'None', self.SIGMA, self.SEED)
             Cij[:NE, NE:] = Cei * self.Jab[0][1]
             del Cei
         
@@ -391,7 +407,10 @@ class Network:
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.EXP_DT_TAU_SYN)
             self.update_rates()
             # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)
-            
+
+            if self.THRESH_DYN==0:
+                self.update_thresh()
+                
             running_step += 1
             
             if step >= self.N_STEADY:
