@@ -19,10 +19,12 @@ matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
 
 def get_df(filename):
     df = pd.read_hdf(filename + '.h5', mode='r')
-    df_E = df[df.neurons<10000]
-    df_I = df[df.neurons>=10000]
+    df_E = df[df.neurons<30000*.35]
+    df_EE = df[df.neurons>=30000*.35]
+    df_EE = df_EE[df_EE.neurons<30000*.7]
+    df_I = df[df.neurons>=30000*.7]
 
-    return df_E, df_I
+    return df, df_E, df_EE, df_I
 
 
 def plot_con(Cij):
@@ -114,7 +116,7 @@ def hist_inputs(df):
     plt.xlabel('Inputs')
 
 
-def heatmap(df):
+def heatmap(df, vmax=20):
     df1 = df[['time','neurons','rates']]
     
     print(df1.head())
@@ -126,7 +128,7 @@ def heatmap(df):
     # xticks = np.linspace(0, len(df1.time), n_ticks)
     # yticks = np.linspace(0, len(df1.neurons), n_ticks)
     
-    ax = sns.heatmap(pt, cmap='jet', vmax=15, xticklabels=xticks, yticklabels=yticks)
+    ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
     
 def spatial_profile(df, window=10):

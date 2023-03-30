@@ -2,7 +2,7 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 1000.0
+DURATION: 500.0
 
 T_STEADY: 100.0
 T_WINDOW: 10.0
@@ -16,7 +16,7 @@ FILE_NAME: chaos
 TF_NAME: TL
 TF_GAIN: 4
 
-N_POP: 1
+N_POP: 2
 N: 20000
 K: 1000
 frac: [.5, .5]
@@ -26,7 +26,7 @@ TAU_SYN: [3., 2., 3., 2.]
 THRESH_DYN: 0
 THRESH: [0.005, 0.01]
 
-RATE_DYN: 1
+RATE_DYN: 0
 TAU_MEM: [15., 10.]
 
 GAIN: 1.0
@@ -35,5 +35,5 @@ Iext: [0.5, 0.25]
 M0: 0.001
 
 SEED: 10
-STRUCTURE: spec
-SIGMA: 4.0
+STRUCTURE: ['spec', 'ring', 'ring', 'ring']
+SIGMA: [6.0, 0.25, 0.5, 0.25]

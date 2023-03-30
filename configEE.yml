@@ -1,0 +1,39 @@
+verbose: 0
+SAVE: 1
+
+DT: 0.1
+DURATION: 500.0
+
+T_STEADY: 100.0
+T_WINDOW: 10.0
+
+T_STIM_ON: 200.0
+T_STIM_OFF: 250.0
+I0: 1.
+PHI0: None
+
+FILE_NAME: chaos
+TF_NAME: TL
+TF_GAIN: 4
+
+N_POP: 3
+N: 30000
+K: 6000
+frac: [.35, .35, .3]
+
+TAU_SYN: [4., 4., 2.]
+
+THRESH_DYN: 0
+THRESH: [0.005, 0.005, 0.01]
+
+RATE_DYN: 0
+TAU_MEM: [20., 20., 10]
+
+GAIN: 1.0
+Jab: [0.44, 0.44, -0.4, 0.44, 0.44, -0.4, 0.67, 0.67, -0.34]
+Iext: [0.5, 0.5, 0.25]
+M0: 0.001
+
+SEED: 10
+STRUCTURE: ['spec', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None']
+SIGMA: [4., 0.25, 0.5, 4.0, 0.25, 0.5, 4.0, 0.25, 4.0]
