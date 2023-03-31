@@ -92,8 +92,11 @@ def line_inputs(df):
     plt.xlabel('Inputs')
 
 
-def hist_rates(df):
-    df1 = df[df.time>.8]
+def hist_rates(df, window):
+
+    df1 = df[df.time < window[1]]
+    df1 = df1[df1.time >= window[0]]
+    
     mean_df = df1.groupby('neurons').mean()
     sns.histplot(mean_df, x=mean_df.rates, kde=True)
     plt.xlabel('Rates (Hz)')
