@@ -9,7 +9,7 @@ T_WINDOW: 10.0
 
 T_STIM_ON: 200.0
 T_STIM_OFF: 250.0
-I0: 0.25
+I0: [0.25, 0.25]
 PHI0: None
 
 FILE_NAME: chaos
@@ -19,12 +19,13 @@ TF_GAIN: 4
 N_POP: 2
 N: 20000
 K: 1000
-frac: [.5, .5]
+frac: [.75, .25]
 
-TAU_SYN: [3., 2., 3., 2.]
+TAU_SYN: [4., 2., 3., 2.]
+TAU_FF: [4., 4., 2.]
 
 THRESH_DYN: 0
-THRESH: [0.005, 0.01]
+THRESH: [0.0, 0.0]
 
 RATE_DYN: 0
 TAU_MEM: [15., 10.]
@@ -36,4 +37,4 @@ M0: 0.001
 
 SEED: 10
 STRUCTURE: ['spec', 'ring', 'ring', 'ring']
-SIGMA: [6.0, 0.25, 0.5, 0.25]
+SIGMA: [15.0, 0.25, 0.5, 0.25]

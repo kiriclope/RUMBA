@@ -6,6 +6,7 @@ from matplotlib.offsetbox import AnchoredText
 from matplotlib.animation import FuncAnimation, PillowWriter
 import pandas as pd
 from scipy.ndimage.filters import gaussian_filter
+from yaml import safe_load
 
 from decode import circcvl, decode_bump
 sns.set_context("poster")
@@ -17,12 +18,32 @@ width = 7.5
 matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
 
 
-def get_df(filename):
+class Bunch(object):
+  def __init__(self, adict):
+    self.__dict__.update(adict)
+
+    
+def get_df(filename, configname='config.yml'):
+    config = safe_load(open(configname, "r"))
+    const = Bunch(config)
+    
+    Na = []
+    for i_pop in range(const.N_POP):
+        Na.append(int(const.N * const.frac[i_pop]))
+
+    print(Na)
     df = pd.read_hdf(filename + '.h5', mode='r')
-    df_E = df[df.neurons<30000*.35]
-    df_EE = df[df.neurons>=30000*.35]
-    df_EE = df_EE[df_EE.neurons<30000*.7]
-    df_I = df[df.neurons>=30000*.7]
+    
+    df_E = df[df.neurons<Na[0]]
+
+    if const.N_POP==2:
+        df_EE = df[df.neurons>=Na[0]]
+        df_I = df[df.neurons>=Na[0]]
+    else:
+        df_EE = df[df.neurons>=Na[0]]
+        df_EE = df_EE[df_EE.neurons<Na[0]+Na[1]]
+    
+        df_I = df[df.neurons>=Na[0]+Na[1]]
 
     return df, df_E, df_EE, df_I
 
