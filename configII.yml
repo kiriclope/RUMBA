@@ -2,14 +2,14 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 350.0
+DURATION: 400.0
 
 T_STEADY: 100.0
 T_WINDOW: 10.0
 
 T_STIM_ON: 200.0
 T_STIM_OFF: 250.0
-I0: [0.5, 0.0, 0.5]
+I0: [0.2, 0.0, 0.0]
 PHI0: None
 
 FILE_NAME: chaos
@@ -19,12 +19,12 @@ TF_GAIN: 4
 N_POP: 3
 N: 30000
 K: 1000
-frac: [.6, .2, .2]
+frac: [.5, .25, .25]
 
-TAU_SYN: [4., 4., 2.]
+TAU_SYN: [4., 2., 2.]
 
 IF_NMDA: 0
-TAU_NMDA: [4., 4., 2.]
+TAU_NMDA: [4., 2., 2.]
 
 FF_DYN: 1
 TAU_FF: [4., 4., 4.]
@@ -36,10 +36,10 @@ RATE_DYN: 0
 TAU_MEM: [20., 20., 10]
 
 GAIN: 1.0
-Jab: [0.44, 0.44, -0.28, 0.44, 0.44, -0.28, 0.67, 0.67, -0.34]
-Iext: [0.5, 0.5, 0.25]
+Jab: [0.44, -0.28, -0.1, 0.67, -0.34, -0.0, 0.67, 0.0, -0.34]
+Iext: [1.0, 0.25, 0.1]
 M0: 0.001
 
 SEED: 10
-STRUCTURE: ['spec', 'None', 'None', 'None', 'spec', 'None', 'None', 'None', 'None']
-SIGMA: [6., 0., 0.0, 0.0, 6., 0., 0.0, 0.0, 0.0]
+STRUCTURE: ['spec', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None']
+SIGMA: [4.5, 0., 0.0, 0.0, 6., 0., 0.0, 0.0, 0.0]

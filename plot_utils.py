@@ -155,12 +155,14 @@ def heatmap(df, vmax=20):
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
     
-def spatial_profile(df, window=10):
-    df1 = df[df.time>0.8]
+def spatial_profile(df, window=10):    
+    df1 = df[df.time < window[1]]
+    df1 = df1[df1.time >= window[0]]
+    
     mean_df = df1.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
 
-    smooth = circcvl(array[:, 0], windowSize=window)
+    smooth = circcvl(array[:, 0], windowSize=250)
 
     plt.plot(smooth)
     plt.xlabel('Neuron #')

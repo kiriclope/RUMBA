@@ -22,7 +22,12 @@ K: 1000
 frac: [.75, .25]
 
 TAU_SYN: [4., 2., 3., 2.]
-TAU_FF: [4., 4., 2.]
+
+IF_NMDA: 1
+TAU_NMDA: [20., 20.]
+
+FF_DYN: 1
+TAU_FF: [4., 4.]
 
 THRESH_DYN: 0
 THRESH: [0.0, 0.0]
@@ -31,10 +36,12 @@ RATE_DYN: 0
 TAU_MEM: [15., 10.]
 
 GAIN: 1.0
-Jab: [0.44, -0.28, 0.67, -0.34]
+# Jab: [0.44, -0.28, 0.67, -0.34]
+Jab: [1, -1.5, 1, -1]
+
 Iext: [0.5, 0.25]
-M0: 0.001
+M0: 1.0
 
 SEED: 10
-STRUCTURE: ['spec', 'ring', 'ring', 'ring']
-SIGMA: [15.0, 0.25, 0.5, 0.25]
+STRUCTURE: ['spec', 'None', 'None', 'None']
+SIGMA: [0.0, 0.0, 0.0, 0.0]

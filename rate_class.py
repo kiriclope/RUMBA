@@ -132,6 +132,10 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None, PHASE=0):
     elif "dense" in STRUCTURE:
         print('with dense cosine structure')
         Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb * np.sqrt(Nb) 
+
+    elif "weak" in STRUCTURE:
+        print('with weak proba')
+        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb) 
             
     Pij[:, :] = Pij[:, :] + 1.0 
     Cij = (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
@@ -187,11 +191,7 @@ def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
 def numba_update_inputs(Cij, rates, inputs, Na, csumNa, EXP_DT_TAU_SYN):
 
     for i_pop in range(len(Na)):
-        inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop]    
-        # Cab = Cij[:, csumNa[i_pop]:csumNa[i_pop+1]]
-        # rb =  rates[csumNa[i_pop]:csumNa[i_pop+1]]
-        # inputs[i_pop] = inputs[i_pop] + np.dot(Cab, rb)
-
+        inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop] 
         inputs[i_pop] = inputs[i_pop] + np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
         
     return inputs
@@ -253,6 +253,13 @@ class Network:
         self.EXP_DT_TAU_SYN = []
         self.DT_TAU_SYN = []
 
+        self.IF_NMDA = const.IF_NMDA        
+        if self.IF_NMDA:
+            self.TAU_NMDA = const.TAU_NMDA
+            self.EXP_DT_TAU_NMDA = []
+            self.DT_TAU_NMDA = []
+        
+        self.FF_DYN = const.FF_DYN 
         self.EXP_DT_TAU_FF = []
         self.DT_TAU_FF = []
         
@@ -267,6 +274,10 @@ class Network:
             self.EXP_DT_TAU_SYN.append(np.exp(-self.DT / self.TAU_SYN[i_pop]))
             self.DT_TAU_SYN.append(self.DT / self.TAU_SYN[i_pop])
 
+            if self.IF_NMDA:
+                self.EXP_DT_TAU_NMDA.append(np.exp(-self.DT / self.TAU_NMDA[i_pop]))
+                self.DT_TAU_NMDA.append(self.DT / self.TAU_NMDA[i_pop])
+
             self.EXP_DT_TAU_FF.append(np.exp(-self.DT / self.TAU_FF[i_pop]))
             self.DT_TAU_FF.append(self.DT / self.TAU_FF[i_pop])
             
@@ -280,6 +291,10 @@ class Network:
         self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float32)
         self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float32)
 
+        if self.IF_NMDA:
+            self.EXP_DT_TAU_NMDA = np.array(self.EXP_DT_TAU_NMDA, dtype=np.float32)
+            self.DT_TAU_NMDA = np.array(self.DT_TAU_NMDA, dtype=np.float32)            
+        
         self.EXP_DT_TAU_MEM = np.array(self.EXP_DT_TAU_MEM, dtype=np.float32)
         self.DT_TAU_MEM = np.array(self.DT_TAU_MEM, dtype=np.float32)
 
@@ -291,11 +306,15 @@ class Network:
         self.M0 = const.M0
 
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(self.N_POP, self.N_POP)
-
+        
         print('Jab', self.Jab)
         
         self.GAIN = const.GAIN
         self.Jab *= const.GAIN
+
+        if self.IF_NMDA:
+            self.Jab_NMDA = self.Jab[:, 0] * self.DT_TAU_NMDA[i_pop] / np.sqrt(self.Ka[0]) 
+            
         self.Iext = np.array(const.Iext, dtype=np.float32)
 
         print('Iext', self.Iext)
@@ -304,6 +323,8 @@ class Network:
 
         for i_pop in range(self.N_POP):
             self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop]) 
+            
+        # self.Jab[-1, :] = self.Jab[-1,:] * np.sqrt(self.Ka[-1]) / self.Ka[-1]
         
         self.Jab[np.isinf(self.Jab)] = 0        
         
@@ -323,6 +344,9 @@ class Network:
                 
         self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
         self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float32)
+
+        if self.IF_NMDA:
+            self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
 
         # rng = np.random.default_rng()
         # self.rates[:self.Na[0]] = rng.normal(5, 1, self.Na[0])
@@ -355,10 +379,17 @@ class Network:
             self.inputs[i_pop] = self.inputs[i_pop] + np.dot(Cab, rb)
     
     def update_rates(self):
-        net_inputs = self.ff_inputs
+        if self.FF_DYN==0:
+            net_inputs = self.ff_inputs_0
+        else:
+            net_inputs = self.ff_inputs
         
         for i_pop in range(self.N_POP):
             net_inputs = net_inputs + self.inputs[i_pop]
+
+        if self.IF_NMDA:
+            for i_pop in range(self.N_POP):
+                net_inputs = net_inputs + self.inputs_NMDA[i_pop]
             
         if self.RATE_DYN==0:
             self.rates = TF(net_inputs, self.thresh, self.TF_NAME)
@@ -421,10 +452,23 @@ class Network:
         Cij = Cij.astype(np.float32)
 
         return Cij
-    
+
+    def generate_Cij_NMDA(self, Cij):
+        Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float32)
+        
+        for i_post in range(self.N_POP):
+            Cij_NMDA[self.csumNa[i_post]:self.csumNa[i_post+1]] = (Cij[self.csumNa[i_post]:self.csumNa[i_post+1], :self.Na[0]]!=0) * self.Jab_NMDA[i_post]
+        
+        Cij_NMDA = Cij_NMDA.astype(np.float32)
+
+        return Cij_NMDA
+        
     def run(self):
-        NE = self.Na[0]        
+        NE = self.Na[0] 
         Cij = np.ascontiguousarray(self.generate_Cij())
+
+        if self.IF_NMDA:
+            Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
         
         self.print_params()
         
@@ -433,9 +477,16 @@ class Network:
         
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
-            self.update_ff_inputs() 
+            
+            if self.FF_DYN:
+                self.update_ff_inputs()
+            
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.csumNa, self.EXP_DT_TAU_SYN)
-            self.update_rates()
+
+            if self.IF_NMDA:
+                self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA)
+            
+            self.update_rates()            
             # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)
 
             if self.THRESH_DYN==0:
@@ -470,7 +521,7 @@ class Network:
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./configEE.yml", "r"))
+    config = safe_load(open("./configII.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
