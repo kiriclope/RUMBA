@@ -10,6 +10,10 @@ class Bunch(object):
   def __init__(self, adict):
     self.__dict__.update(adict)
 
+def update_Cij(self, Cij, Rij, rates, ALPHA=1, ETA_DT=0.01):
+    norm = np.where(Cij, ALPHA * Cij * rates**2) 
+    Cij = np.where(Cij, Cij + ETA_DT * (Rij - norm))
+    return Cij
 
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
@@ -225,6 +229,10 @@ class Network:
         self.RATE_DYN = const.RATE_DYN
         # SIMULATION
         self.DT = const.DT
+
+        self.ALPHA = 1.0
+        self.ETA_DT = self.DT / 10.0
+        
         self.DURATION = float(const.DURATION)
         self.N_STEPS = int(self.DURATION / self.DT)
 
@@ -371,6 +379,11 @@ class Network:
 
         # print('MF Rates:', self.mf_rates)
 
+    def update_Cij(self, Cij, Rij):
+        norm = np.where(Cij, self.ALPHA * Cij * self.rates**2) 
+        Cij = np.where(Cij, Cij + self.ETA_DT * (Rij - norm))
+        return Cij
+    
     def update_inputs(self, Cij):
         for i_pop in range(self.N_POP):
             self.inputs[i_pop] = self.inputs[i_pop] * self.EXP_DT_TAU_SYN[i_pop]    
