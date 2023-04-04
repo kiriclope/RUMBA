@@ -6,14 +6,17 @@ from scipy.special import erf
 from pandas import DataFrame, HDFStore, concat
 from numba import jit
 
+
 class Bunch(object):
   def __init__(self, adict):
     self.__dict__.update(adict)
 
-def update_Cij(self, Cij, Rij, rates, ALPHA=1, ETA_DT=0.01):
-    norm = np.where(Cij, ALPHA * Cij * rates**2) 
-    Cij = np.where(Cij, Cij + ETA_DT * (Rij - norm))
-    return Cij
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_Cij(Cij, rates, DT_TAU_SYN, ALPHA=1, ETA_DT=0.01):
+    norm = np.where(Cij, ALPHA * Cij / DT_TAU_SYN[0] * rates**2, 0) 
+    Cij = np.where(Cij, DT_TAU_SYN[0] * (Cij + ETA_DT * (np.outer(rates, rates) - norm)), 0)
+    return Cij 
 
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
@@ -21,7 +24,6 @@ def nd_numpy_to_nested(X):
     Parameters
     ----------
     X : NumPy ndarray, input
-    
     Returns
     -------
     pandas DataFrame
@@ -39,7 +41,7 @@ def nd_numpy_to_nested(X):
         df_i = DataFrame(X[i_time,:, 1:], columns=variables)
         df_i['neurons'] = idx
         df_i['time'] = X[i_time, 0, 0]
-
+        
         # print(df_i)
         df = concat((df, df_i))
         
@@ -98,7 +100,7 @@ def strided_method(ar):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE=None, SIGMA=1, SEED=None, PHASE=0):
+def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.int32)
@@ -217,6 +219,8 @@ class Network:
 
         const = Bunch(kwargs)
 
+        self.IF_LEARNING = const.IF_LEARNING
+        
         self.SAVE = const.SAVE
         self.verbose = const.verbose
         if self.verbose:
@@ -326,8 +330,11 @@ class Network:
         self.Iext = np.array(const.Iext, dtype=np.float32)
 
         print('Iext', self.Iext)
-        
-        # self.mf_rates = -np.dot(np.linalg.inv(self.Jab), self.Iext)
+
+        try:
+            self.mf_rates = -np.dot(np.linalg.inv(self.Jab), self.Iext)
+        except:
+            self.mf_rates = np.nan
 
         for i_pop in range(self.N_POP):
             self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop]) 
@@ -377,12 +384,7 @@ class Network:
         print('Iext', self.Iext)
         print('Jab', self.Jab.flatten())
 
-        # print('MF Rates:', self.mf_rates)
-
-    def update_Cij(self, Cij, Rij):
-        norm = np.where(Cij, self.ALPHA * Cij * self.rates**2) 
-        Cij = np.where(Cij, Cij + self.ETA_DT * (Rij - norm))
-        return Cij
+        print('MF Rates:', self.mf_rates)
     
     def update_inputs(self, Cij):
         for i_pop in range(self.N_POP):
@@ -452,7 +454,7 @@ class Network:
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop]) 
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - self.I0[i_pop] * (1.0 + np.cos(theta - self.PHI0) )
-            
+    
     def generate_Cij(self):
         Cij = np.zeros((self.N, self.N), dtype=np.float32)
         
@@ -475,7 +477,14 @@ class Network:
         Cij_NMDA = Cij_NMDA.astype(np.float32)
 
         return Cij_NMDA
-        
+
+    def update_Cij(self, Cij):
+        Cab = Cij[self.csumNa[0]:self.csumNa[1], self.csumNa[0]:self.csumNa[1]]
+        rE = self.rates[:self.csumNa[1]]
+        Cab = numba_update_Cij(Cab, rE, self.DT_TAU_SYN, ALPHA=self.ALPHA, ETA_DT=self.ETA_DT)
+        Cij[self.csumNa[0]:self.csumNa[1], self.csumNa[0]:self.csumNa[1]] = Cab
+        return Cij
+    
     def run(self):
         NE = self.Na[0] 
         Cij = np.ascontiguousarray(self.generate_Cij())
@@ -495,11 +504,13 @@ class Network:
                 self.update_ff_inputs()
             
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.csumNa, self.EXP_DT_TAU_SYN)
-
+            
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA)
             
-            self.update_rates()            
+            self.update_rates()
+            if self.IF_LEARNING:
+                Cij = self.update_Cij(Cij)
             # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)
 
             if self.THRESH_DYN==0:
@@ -534,7 +545,7 @@ class Network:
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./configII.yml", "r"))
+    config = safe_load(open("./config.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
