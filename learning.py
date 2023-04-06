@@ -10,7 +10,7 @@ class HebbianLearningModels:
 
         Dwij = self.eta * ri * rj
 
-    def oja_rule(self, wij, ri, rj):
+    def oja_rule(self, wij, ri, rj):  # sum wij2 = 1/alpha
         Dwij = self.eta * (ri * rj - self.alpha * ri * rj * wij)
 
-    def bcm_rule(self, wij, ri, rj):
+    # def bcm_rule(self, wij, ri, rj):

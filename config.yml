@@ -2,35 +2,36 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 500.0
+DURATION: 2000.0
 
-T_STEADY: 100.0
+T_STEADY: 1500.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 200.0
-T_STIM_OFF: 250.0
-I0: [0.25, 0.25]
+T_STIM_ON: 1600.0
+T_STIM_OFF: 1650.0
+I0: [0.1, 0.0]
 PHI0: None
+SIGMA_EXT: 1.0
 
 FILE_NAME: chaos
 TF_NAME: TL
 TF_GAIN: 4
 
 N_POP: 2
-N: 5000
-K: 500
-frac: [.75, .25]
+N: 2000
+K: 250
+frac: [.5, .5]
 
 TAU_SYN: [4., 2.]
 
 IF_NMDA: 0
 TAU_NMDA: [20., 20.]
 
-FF_DYN: 0
+FF_DYN: 1
 TAU_FF: [4., 4.]
 
 THRESH_DYN: 0
-THRESH: [0.0, 0.0]
+THRESH: [0.00, 0.00]
 
 RATE_DYN: 0
 TAU_MEM: [15., 10.]
@@ -40,10 +41,13 @@ Jab: [0.44, -0.28, 0.67, -0.34]
 # Jab: [1, -1.5, 1, -1]
 
 Iext: [0.5, 0.25]
-M0: 0.001
+M0: .01
 
 IF_LEARNING: 1
 
 SEED: 10
-STRUCTURE: ['spec', 'None', 'None', 'None']
+STRUCTURE: ['None', 'None', 'None', 'None']
 SIGMA: [4.0, 0.0, 0.0, 0.0]
+
+TOLERANCE: 1.e-12
+MAXITER: 100

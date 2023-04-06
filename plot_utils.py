@@ -124,7 +124,7 @@ def hist_rates(df, window):
 
 
 def hist_inputs(df):
-    df1 = df[df.time>.8]
+    df1 = df[df.time>.0]
     mean_df = df1.groupby('neurons').mean()
     fig, ax = plt.subplots()
 
@@ -155,7 +155,7 @@ def heatmap(df, vmax=20):
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
     
-def spatial_profile(df, window=10):    
+def spatial_profile(df, window=10):
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
     

@@ -11,6 +11,7 @@ T_STIM_ON: 200.0
 T_STIM_OFF: 250.0
 I0: [0.5, 0.0, 0.5]
 PHI0: None
+SIGMA_EXT: .25
 
 FILE_NAME: chaos
 TF_NAME: TL
@@ -37,9 +38,12 @@ TAU_MEM: [20., 20., 10]
 
 GAIN: 1.0
 Jab: [0.44, 0.44, -0.28, 0.44, 0.44, -0.28, 0.67, 0.67, -0.34]
-Iext: [0.5, 0.5, 0.25]
-M0: 0.001
+Iext: [0.35, 0.35, 0.25]
+M0: 1
 
 SEED: 10
 STRUCTURE: ['spec', 'None', 'None', 'None', 'spec', 'None', 'None', 'None', 'None']
-SIGMA: [6., 0., 0.0, 0.0, 6., 0., 0.0, 0.0, 0.0]
+SIGMA: [10.0, 0., 0.0, 10.0, 0.0, 0.0, 10.0, 0.0, 0.0]
+
+TOLERANCE: 1.e-9
+MAXITER: 100
