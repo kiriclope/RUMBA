@@ -155,50 +155,6 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cij(Ka, Na, STRUCTURE=None, SIGMA=1, SEED=None):
-
-    N = Na[0]+Na[1]
-    K = Ka[0]+Ka[1]
-    Pij = np.zeros((N,N), dtype=np.float32)
-    Cij = np.zeros((N,N), dtype=np.int32)
-
-    # print('random connectivity')
-    if STRUCTURE != 'None':
-        theta = np.linspace(0.0, 2.0 * np.pi, Na[0])
-        theta = theta.astype(np.float32)
-        # print('theta', theta.shape)
-        theta_ij = strided_method(theta).T
-        # theta_ij = theta_mat(theta)
-        cos_ij = np.cos(theta_ij)
-        cos2_ij = np.cos(2.0 * theta_ij)
-
-        # print('cos', cos_ij.shape)
-        Pij[:Na[0], :Na[0]] = cos_ij + cos2_ij
-
-    if STRUCTURE == "ring":
-        print('with strong cosine structure')
-        Pij[:Na[0], :Na[0]] = Pij[:Na[0], :Na[0]] * SIGMA
-
-    elif STRUCTURE == "spec":
-        print('with weak cosine structure')
-        Pij[:Na[0], :Na[0]] = Pij[:Na[0], :Na[0]] * SIGMA / np.sqrt(K)
-
-    Pij = Pij + 1
-    # elif STRUCTURE == "low_rank":
-    #     print('with weak low rank structure')
-    #     mean = [0, 0]
-    #     cov = [[1, 0], [0, 1]]
-    #     # rng = np.random.default_rng(seed=None)
-    #     # ksi = rng.multivariate_normal(mean, cov, size=N).T
-    #     # ksi = np.random.multivariate_normal(mean, cov, size=N).T
-    #     # Pij = 1.0 + SIGMA * ksi[0] * ksi[1] / np.sqrt(K)
-
-    Cij = 1.0 * (np.random.rand(N, N) < (K / N) * Pij)
-
-    return Cij
-
-
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_inputs(Cij, rates, inputs, Na, csumNa, EXP_DT_TAU_SYN):
 
     for i_pop in range(len(Na)):
@@ -253,8 +209,6 @@ class Network:
         self.N = int(const.N)
         self.K = const.K
 
-        self.idx = np.arange(self.N)
-        self.idx.astype(np.float32)
         self.ones_vec = np.ones((self.N,), dtype=np.float32) / self.N_STEPS
 
         self.TAU_SYN = const.TAU_SYN
@@ -341,8 +295,8 @@ class Network:
         for i_pop in range(self.N_POP):
             self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop])
 
-        if self.N_POP>2:
-            self.Jab[:2, -1] = self.Jab[:2,-1] * np.sqrt(self.Ka[-1]) / self.Ka[-1]
+        # if self.N_POP>2:
+        #     self.Jab[:2, -1] = self.Jab[:2,-1] * np.sqrt(self.Ka[-1]) / self.Ka[-1]
 
         self.Jab[np.isinf(self.Jab)] = 0
 
@@ -370,10 +324,15 @@ class Network:
         if self.IF_NMDA:
             self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
 
-        # rng = np.random.default_rng()
-        # self.rates[:self.Na[0]] = rng.normal(5, 1, self.Na[0])
-        # self.rates[self.Na[0]:] = rng.normal(10, 2, self.Na[1])
+        rng = np.random.default_rng()
+        mean = [5, 5, 10]
+        var = [1, 1, 2]
+        
+        for i_pop in range(self.N_POP):
+            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop]) / 1000.
 
+        print(self.rates[:5])
+        
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
 
@@ -531,13 +490,14 @@ class Network:
 
                 if running_step >= self.N_WINDOW:
                     data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
-
+                    
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
                           'rates (Hz)', np.round(np.mean(self.rates[:NE]) * 1000, 2),
                           np.round(np.mean(self.rates[NE:self.csumNa[2]]) * 1000, 2),
                           np.round(np.mean(self.rates[self.csumNa[2]:]) * 1000, 2))
                     running_step = 0
 
+        self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
         self.df = nd_numpy_to_nested(data)
@@ -553,7 +513,7 @@ class Network:
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./config.yml", "r"))
+    config = safe_load(open("./configEE.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()

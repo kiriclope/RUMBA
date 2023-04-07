@@ -1,7 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from yaml import safe_load
 from scipy.integrate import quad_vec, quad, quadrature
-from scipy.special import erfc
+from scipy.special import erf, erfc
 from scipy.optimize import root
 
 
@@ -11,32 +12,46 @@ class Bunch(object):
 
 
 def u_theta(theta, u0, u1):
-    return u0 + u1 * np.cos(2.0 * theta)
+    return u0 + u1 * np.cos(theta)
 
 
 def quench_avg_Phi(u, alpha):
-    return 0.5 * erfc((1.0-u) / np.sqrt(2.0 * np.abs(alpha))) * (alpha>0)
-    
+    # Sigmoid
+    # return 0.5 * erfc((1.0-u) / np.sqrt(2.0 * np.abs(alpha))) * (alpha>0)
+    # threshold linear
+    if alpha > 0:
+        return ( 0.5 * u * erf(u / np.sqrt(2.0 * alpha) + 1.0) + np.sqrt(alpha / 2.0 / np.pi) * np.exp((-u**2)/(2.0 * alpha)) )
+    else:
+        return np.nan
+
+
 def integrand(theta, u0, u1, alpha):
     return quench_avg_Phi(u_theta(theta, u0, u1), alpha)
 
 
 def integrand2(theta, u0, u1, alpha):
-    return quench_avg_Phi(u_theta(theta, u0, u1), alpha) * np.cos(2.0 * theta)
+    return quench_avg_Phi(u_theta(theta, u0, u1), alpha) * np.cos(theta)
 
 
 def m0_func(u0, u1, alpha):
-    res, err = quad(integrand, 0, np.pi, args=(u0, u1, alpha), limit=100)
+    if alpha <= 0 :
+        res = np.nan
+    else:
+        res, err = quad(integrand, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=50)
     # res, err = quadrature(integrand, 0, np.pi, args=(u0, u1, alpha), miniter=40)
     # res, err = quad_vec(integrand, 0, np.pi, args=(u0, u1, alpha), workers=-1)
-    return res / np.pi
+    return res / 2.0 / np.pi
 
 
 def m1_func(u0, u1, alpha):
-    res, err = quad(integrand2, 0, np.pi, args=(u0, u1, alpha), limit=100)
+    if alpha <= 0:
+        res = np.nan
+    else:
+        res, err = quad(integrand2, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=50)
     # res, err = quadrature(integrand2, 0, np.pi, args=(u0, u1, alpha), miniter=40)
     # res, err = quad_vec(integrand2, 0, np.pi, args=(u0, u1, alpha), workers=-1)
-    return res * 2.0 / np.pi
+    return res * 1.0 / np.pi
+
 
 m0_func = np.vectorize(m0_func)
 m1_func = np.vectorize(m1_func)
@@ -46,6 +61,7 @@ class MeanFieldSpec:
     def __init__(self, **kwargs):
         const = Bunch(kwargs)
 
+        self.verbose = const.verbose
         self.TOLERANCE = const.TOLERANCE
         self.MAXITER = const.MAXITER
 
@@ -54,6 +70,9 @@ class MeanFieldSpec:
         self.N = int(const.N)
         self.K = const.K
 
+        if self.K == 'Inf':
+            self.K = np.inf
+            
         self.Na = []
         self.Ka = []
 
@@ -82,7 +101,7 @@ class MeanFieldSpec:
         self.Jab2 = self.Jab * self.Jab
         # print('Jab2', self.Jab2)
 
-        self.Iext *= const.M0
+        # self.Iext *= const.M0
         
         # print('kappa_Jab', self.kappa_Jab)
         try:            
@@ -105,7 +124,7 @@ class MeanFieldSpec:
         m1 = m1_func(u0, u1, alpha)
         u1_eq = u1 - np.dot(self.kappa_Jab, m1)
         
-        alpha_eq = alpha - np.dot(self.Jab2, m0)
+        alpha_eq = alpha - np.dot(self.Jab2, m0**2)
         
         eqs = np.array([u0_eq, u1_eq, alpha_eq])
 
@@ -113,19 +132,24 @@ class MeanFieldSpec:
 
     def solve(self):
         self.solutions()
-        print('initial guess', 'm0', np.round(self.m0, 3), 'm1', np.round(self.m1, 3))
+        if self.verbose:
+            print('initial guess', 'm0', np.round(self.m0, 3), 'm1', np.round(self.m1, 3))
         self.error = self.self_consistent_eqs(self.initial_guess)
         # print('initial error', self.error)
 
         counter=0
         while any( self.error > self.TOLERANCE ):
             
-            self.initial_guess = np.random.rand(3 * self.N_POP)
-            self.result = root(self.self_consistent_eqs, self.initial_guess, method='lm', tol=self.TOLERANCE)
+            self.initial_guess = np.random.rand(3 * self.N_POP) * 2.0 - 1.0
+            self.result = root(self.self_consistent_eqs, self.initial_guess, method='hybr', tol=self.TOLERANCE)
             self.error = self.self_consistent_eqs(self.result.x)
             self.solutions()
 
-            print('iter', counter, 'm0', np.round(self.m0, 3), 'm1', np.round(self.m1, 3))
+            if any(np.isnan(self.m0)):
+                self.error = np.ones(3)
+            
+            if self.verbose:
+                print('iter', counter, 'm0', np.round(self.m0, 3), 'm1', np.round(self.m1, 3))
             # print('error', self.error > self.TOLERANCE)
 
             if counter >= self.MAXITER :
@@ -151,8 +175,42 @@ class MeanFieldSpec:
 
         # print('m0', self.m0, 'm1', self.m1)
 
+    def bifurcation(self):
+        self.m0_list = []
+        self.m1_list = []
+
+        self.kappas = np.linspace(6, 8, 10)
+        for kappa in self.kappas:
+            self.kappa[0][0] = kappa
+            # self.kappa[0][1] = 0.5 * kappa 
+            # self.kappa[1][0] = kappa
+            # self.kappa[1][1] = 0.5 * kappa
+           
+            self.kappa_Jab = self.Jab * self.kappa
+
+            self.solve()
+            self.m0_list.append(self.m0)
+            self.m1_list.append(self.m1)
+            
+            print(self.kappa[0][0], 'm0', self.m0, 'm1', self.m1)
+
+        self.m0_list = np.array(self.m0_list).T
+        self.m1_list = np.array(self.m1_list).T
+        
 if __name__ == "__main__":
 
-    config = safe_load(open("./configII.yml", "r"))
+    config = safe_load(open("./configEE.yml", "r"))
     model = MeanFieldSpec(**config)
-    model.solve()
+    # model.solve()
+    fig, ax = plt.subplots(1,2)
+    for iter in range(10):
+        print('iter', iter)
+        model.bifurcation()
+    
+        ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
+        # ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'ko')
+        # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
+    
+        ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
+        # ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'ko')
+        # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
