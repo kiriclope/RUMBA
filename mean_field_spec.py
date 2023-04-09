@@ -101,7 +101,7 @@ class MeanFieldSpec:
         self.Jab2 = self.Jab * self.Jab
         # print('Jab2', self.Jab2)
 
-        # self.Iext *= const.M0
+        self.Iext *= const.M0
         
         # print('kappa_Jab', self.kappa_Jab)
         try:            
@@ -150,7 +150,7 @@ class MeanFieldSpec:
             
             if self.verbose:
                 print('iter', counter, 'm0', np.round(self.m0, 3), 'm1', np.round(self.m1, 3))
-            # print('error', self.error > self.TOLERANCE)
+                print('error', self.error)
 
             if counter >= self.MAXITER :
                 print('ERROR: max number of iterations reached')
@@ -201,7 +201,8 @@ if __name__ == "__main__":
 
     config = safe_load(open("./configEE.yml", "r"))
     model = MeanFieldSpec(**config)
-    # model.solve()
+    model.solve()
+    print('m0', model.m0, 'm1', model.m1)
     fig, ax = plt.subplots(1,2)
     for iter in range(10):
         print('iter', iter)
@@ -214,3 +215,4 @@ if __name__ == "__main__":
         ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
         # ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'ko')
         # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
+

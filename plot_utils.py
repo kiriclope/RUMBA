@@ -228,6 +228,7 @@ def line_phase(df):
     fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
 
     m0 = np.nanmean(array, -1)
+    
     ax[0].plot(times, m0) 
     ax[0].set_xlabel('Time (ms)')
     ax[0].set_ylabel('Population Rate (Hz)')

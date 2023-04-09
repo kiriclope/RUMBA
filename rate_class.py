@@ -329,7 +329,8 @@ class Network:
         var = [1, 1, 2]
         
         for i_pop in range(self.N_POP):
-            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop]) / 1000.
+            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop]) 
+            self.inputs[i_pop] = rng.normal(mean[i_pop], var[i_pop], self.N) 
 
         print(self.rates[:5])
         
@@ -489,12 +490,12 @@ class Network:
                 time = step * self.ones_vec
 
                 if running_step >= self.N_WINDOW:
-                    data.append(np.vstack((time, self.rates * 1000, self.ff_inputs, self.inputs)).T)
+                    data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
                     
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
-                          'rates (Hz)', np.round(np.mean(self.rates[:NE]) * 1000, 2),
-                          np.round(np.mean(self.rates[NE:self.csumNa[2]]) * 1000, 2),
-                          np.round(np.mean(self.rates[self.csumNa[2]:]) * 1000, 2))
+                          'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
+                          np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
+                          np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
                     running_step = 0
 
         self.Cij = Cij
