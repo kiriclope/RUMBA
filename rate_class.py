@@ -5,7 +5,7 @@ from tqdm import tqdm
 from scipy.special import erf
 from pandas import DataFrame, HDFStore, concat
 from numba import jit
-
+from decode import decode_bump
 
 class Bunch(object):
   def __init__(self, adict):
@@ -22,6 +22,7 @@ def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
     
     # Cij = np.where(Cij, Cij + ETA_DT * np.outer(rates, rates), 0)
     return Cij
+
 
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
@@ -70,8 +71,8 @@ def create_df(data):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def TF(x, thresh, tfname='TL',  gain=1.0):
     if tfname=='TL':
-        return x * (x > thresh)
-
+        # return x * (x > thresh)
+        return np.where(x>0, x, 0)
     # if tfname=='NL':
     #     x_nthresh = x**2 * (x > 0)
     #     x_thresh = (x>=thresh) * (np.sqrt(gain * np.abs(x)) - np.sqrt(gain * thresh) + thresh**2 - x**2)
@@ -155,6 +156,13 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF):
+    ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
+    ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
+
+    return ff_inputs
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_inputs(Cij, rates, inputs, Na, csumNa, EXP_DT_TAU_SYN):
 
     for i_pop in range(len(Na)):
@@ -165,14 +173,16 @@ def numba_update_inputs(Cij, rates, inputs, Na, csumNa, EXP_DT_TAU_SYN):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_rates(rates, inputs, ff_inputs, Na, TF_NAME):
+def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME):
     net_inputs = ff_inputs
 
-    for i_pop in range(len(Na)):
+    for i_pop in range(inputs.shape[0]): 
         net_inputs = net_inputs + inputs[i_pop]
-    rates = TF(net_inputs, TF_NAME)
+        
+    rates = TF(net_inputs, thresh, TF_NAME)
 
-    return rates
+    return rates.astype(np.float32)
+
 
 
 class Network:
@@ -252,10 +262,12 @@ class Network:
             self.EXP_DT_TAU_MEM.append(np.exp(-self.DT / self.TAU_MEM[i_pop]))
             self.DT_TAU_MEM.append(self.DT / self.TAU_MEM[i_pop])
 
-
         self.Na = np.array(self.Na, dtype=np.int64)
         self.Ka = np.array(self.Ka, dtype=np.float32)
 
+        self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float32)
+        self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float32)
+        
         self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float32)
         self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float32)
 
@@ -323,20 +335,21 @@ class Network:
 
         if self.IF_NMDA:
             self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
-
         rng = np.random.default_rng()
-        mean = [5, 5, 10]
-        var = [1, 1, 2]
+        mean = [2, 2, 5]
+        var = [.5, .5, 1]
         
         for i_pop in range(self.N_POP):
-            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop]) 
-            self.inputs[i_pop] = rng.normal(mean[i_pop], var[i_pop], self.N) 
+            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
+            
+            self.inputs[i_pop] = rng.normal(10, 10/4.0, self.N) 
 
+        self.inputs[-1] = (-1.0) * self.inputs[-1]
+            
         print(self.rates[:5])
         
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
-
         self.thresh = np.ones( (self.N,), dtype=np.float32)
 
         for i_pop in range(self.N_POP):
@@ -381,23 +394,6 @@ class Network:
                 self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.EXP_DT_TAU_MEM[i_pop]
                 self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + self.DT_TAU_MEM[i_pop] * TF(net_inputs[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.TF_NAME, self.TF_GAIN)
 
-        # NE = self.Na[0]
-        # net_inputs = self.ff_inputs
-
-        # net_inputs = net_inputs + self.inputs[0]
-        # if self.Na[1]>0:
-        #     net_inputs = net_inputs + self.inputs[1]
-
-        # if self.RATE_DYN==0:
-        #     self.rates = TF(net_inputs, self.thresh, self.TF_NAME, self.TF_GAIN)
-        # else:
-        #     self.rates[:NE] = self.rates[:NE] * self.EXP_DT_TAU_MEM[0] # excitatory rates
-        #     self.rates[:NE] = self.rates[:NE] + self.DT_TAU_MEM[0] * TF(net_inputs[:NE], self.thresh[:NE], self.TF_NAME, self.TF_GAIN)
-
-        #     if self.Na[1]>0:
-        #         self.rates[NE:] = self.rates[NE:] * self.EXP_DT_TAU_MEM[1]  # inhibitory rates
-        #         self.rates[NE:] = self.rates[NE:] + self.DT_TAU_MEM[1] * TF(net_inputs[NE:], self.thresh[NE:], self.TF_NAME, self.TF_GAIN)
-
     def update_thresh(self):
         self.thresh = self.thresh * self.EXP_DT_TAU_MEM[0]
         self.thresh = self.thresh + self.DT_TAU_MEM[0] * self.THRESH[0]
@@ -431,7 +427,7 @@ class Network:
                     self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.SEED)
                 Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab * self.Jab[i_post][j_pre]
 
-        Cij = Cij.astype(np.float32)
+        # Cij = Cij.astype(np.float32)
 
         return Cij
 
@@ -441,7 +437,7 @@ class Network:
         for i_post in range(self.N_POP):
             Cij_NMDA[self.csumNa[i_post]:self.csumNa[i_post+1]] = (Cij[self.csumNa[i_post]:self.csumNa[i_post+1], :self.Na[0]]!=0) * self.Jab_NMDA[i_post]
 
-        Cij_NMDA = Cij_NMDA.astype(np.float32)
+        # Cij_NMDA = Cij_NMDA.astype(np.float32)
 
         return Cij_NMDA
 
@@ -467,19 +463,21 @@ class Network:
 
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
-
+            
             if self.FF_DYN:
-                self.update_ff_inputs()
-
+                # self.update_ff_inputs()
+                self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF)
+                
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.csumNa, self.EXP_DT_TAU_SYN)
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA)
 
-            self.update_rates()
+            # self.update_rates()
+            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME)
+            
             if self.IF_LEARNING:
                 Cij = self.update_Cij(Cij)
-            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.Na, self.TF_NAME)
 
             if self.THRESH_DYN==0:
                 self.update_thresh()
@@ -490,12 +488,30 @@ class Network:
                 time = step * self.ones_vec
 
                 if running_step >= self.N_WINDOW:
-                    data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
+                    amplitudes = []
+                    phases = []
                     
+                    data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
+
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
                           'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
                           np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
                           np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
+                    
+                    m1, phase = decode_bump(self.rates[:self.csumNa[1]])
+                    amplitudes.append(m1)
+                    phases.append(phase)
+                    
+                    m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
+                    amplitudes.append(m1)
+                    phases.append(phase)
+
+                    m1, phase = decode_bump(self.rates[self.csumNa[2]:])
+                    amplitudes.append(m1)
+                    phases.append(phase)
+                                        
+                    print('m1', amplitudes, 'phase', phases)
+                    
                     running_step = 0
 
         self.Cij = Cij
