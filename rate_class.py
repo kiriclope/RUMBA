@@ -2,28 +2,19 @@ import numpy as np
 from time import perf_counter
 from yaml import safe_load
 from tqdm import tqdm
-from scipy.special import erf
+from scipy.special import erf, i0
 from pandas import DataFrame, HDFStore, concat
 from numba import jit
+
 from decode import decode_bump
+from numba_con import generate_Cab, numba_update_Cij
+
 
 class Bunch(object):
   def __init__(self, adict):
-    self.__dict__.update(adict)
+      self.__dict__.update(adict)
 
-
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
-    # norm = np.where(Cij, ALPHA * Cij * rates**2, 0)
-    # Cij = np.where(Cij, (Cij + ETA_DT * (np.outer(rates, rates) - norm)), 0)
-
-    norm = np.where(Cij, ALPHA * Cij * rates**2, 0)
-    Cij = Cij + ETA_DT * (np.outer(rates, rates) - norm)
-    
-    # Cij = np.where(Cij, Cij + ETA_DT * np.outer(rates, rates), 0)
-    return Cij
-
-
+      
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
     into pandas DataFrame (with time series as pandas Series in cells)
@@ -72,12 +63,15 @@ def create_df(data):
 def TF(x, thresh, tfname='TL',  gain=1.0):
     if tfname=='TL':
         # return x * (x > thresh)
-        return np.where(x>0, x, 0)
+        return np.where(x > 0, x, 0)
+    if tfname=='NL':
+        return np.where(x >= 1.0, np.sqrt(4.0 * x - 3.0), x * x * (x > 0))
+    
     # if tfname=='NL':
     #     x_nthresh = x**2 * (x > 0)
     #     x_thresh = (x>=thresh) * (np.sqrt(gain * np.abs(x)) - np.sqrt(gain * thresh) + thresh**2 - x**2)
     #     return  x_nthresh + x_thresh
-
+    
     # if tfname=='Sig':
     #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
     # elif tfname=='Sig':
@@ -87,102 +81,36 @@ def TF(x, thresh, tfname='TL',  gain=1.0):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def theta_mat(theta, phi):
-    theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
-
-    for i in range(phi.shape[0]):
-        for j in range(theta.shape[0]):
-            theta_mat[i, j] = phi[i] - theta[j]
-
-    return theta_mat
-
-
-@jit(nopython=True, parallel=False, fastmath=True, cache=True)
-def strided_method(ar):
-    a = np.concatenate((ar, ar[1:]))
-    L = len(ar)
-    n = a.strides[0]
-    return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
-
-
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
-
-    Pij = np.zeros((Na, Nb), dtype=np.float32)
-    Cij = np.zeros((Na, Nb), dtype=np.int32)
-
-    print('random connectivity')
-    if STRUCTURE != 'None':
-        theta = np.linspace(0.0, 2.0 * np.pi, Nb)
-        theta = theta.astype(np.float32)
-
-        phi = np.linspace(0.0, 2.0 * np.pi, Na)
-        phi = phi.astype(np.float32)
-
-        theta_ij = theta_mat(theta, phi)
-        cos_ij = np.cos(theta_ij + PHASE)
-
-        if 'lateral' in STRUCTURE:
-            cos2_ij = np.cos(2.0 * theta_ij)
-            print('lateral')
-            Pij[:, :] = cos_ij + cos2_ij
-        else:
-            Pij[:, :] = cos_ij
-
-    if "ring" in STRUCTURE:
-        print('with strong cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA)
-
-    elif "spec" in STRUCTURE:
-        print('with weak cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
-
-    elif "small" in STRUCTURE:
-        print('with very weak cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb
-
-    elif "dense" in STRUCTURE:
-        print('with dense cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb * np.sqrt(Nb)
-
-    elif "weak" in STRUCTURE:
-        print('with weak proba')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
-
-    Pij[:, :] = Pij[:, :] + 1.0
-    Cij = (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
-
-    return Cij
-
-
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF):
     ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
     ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
 
     return ff_inputs
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_inputs(Cij, rates, inputs, Na, csumNa, EXP_DT_TAU_SYN):
 
-    for i_pop in range(len(Na)):
-        inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop]
-        inputs[i_pop] = inputs[i_pop] + np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
+
+    if SYN_DYN == 0:
+        for i_pop in range(inputs.shape[0]):
+            inputs[i_pop] = np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
+    else:
+        for i_pop in range(inputs.shape[0]):
+            inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop]
+            inputs[i_pop] = inputs[i_pop] + np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
 
     return inputs
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME):
+def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME, csumNa, EXP_DT_TAU_MEM, DT_TAU_MEM, RATE_DYN=0):
     net_inputs = ff_inputs
 
     for i_pop in range(inputs.shape[0]): 
         net_inputs = net_inputs + inputs[i_pop]
+    r = TF(net_inputs, thresh, TF_NAME)
         
-    rates = TF(net_inputs, thresh, TF_NAME)
-
-    return rates.astype(np.float32)
-
+    return r.astype(np.float32)
 
 
 class Network:
@@ -202,6 +130,8 @@ class Network:
         self.TF_GAIN = const.TF_GAIN
 
         self.RATE_DYN = const.RATE_DYN
+        self.SYN_DYN = const.SYN_DYN
+        
         # SIMULATION
         self.DT = const.DT
 
@@ -468,13 +398,13 @@ class Network:
                 # self.update_ff_inputs()
                 self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF)
                 
-            self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.Na, self.csumNa, self.EXP_DT_TAU_SYN)
+            self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN)
 
             if self.IF_NMDA:
-                self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA)
+                self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
 
-            # self.update_rates()
-            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME)
+            self.update_rates()
+            # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
             
             if self.IF_LEARNING:
                 Cij = self.update_Cij(Cij)
@@ -506,10 +436,11 @@ class Network:
                     amplitudes.append(m1)
                     phases.append(phase)
 
-                    m1, phase = decode_bump(self.rates[self.csumNa[2]:])
-                    amplitudes.append(m1)
-                    phases.append(phase)
-                                        
+                    if self.N_POP>2:
+                        m1, phase = decode_bump(self.rates[self.csumNa[2]:])
+                        amplitudes.append(m1)
+                        phases.append(phase)
+                    
                     print('m1', amplitudes, 'phase', phases)
                     
                     running_step = 0
@@ -530,7 +461,7 @@ class Network:
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./configEE.yml", "r"))
+    config = safe_load(open("./config_bestue.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()

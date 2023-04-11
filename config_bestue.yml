@@ -1,0 +1,53 @@
+verbose: 0
+SAVE: 1
+
+DT: 0.1
+DURATION: 1000.0
+
+T_STEADY: 500.0
+T_WINDOW: 10.0
+
+T_STIM_ON: 600.0
+T_STIM_OFF: 650.0
+I0: [0.2, 0.0]
+PHI0: None
+SIGMA_EXT: 1.0
+
+FILE_NAME: chaos
+TF_NAME: NL
+TF_GAIN: 4
+
+N_POP: 2
+N: 1000
+K: 100
+frac: [.5, .5]
+
+SYN_DYN: 0
+TAU_SYN: [4., 2.]
+
+IF_NMDA: 0
+TAU_NMDA: [20., 20.]
+
+FF_DYN: 1
+TAU_FF: [4., 4.]
+
+THRESH_DYN: 0
+THRESH: [0.00, 0.00]
+
+RATE_DYN: 1
+TAU_MEM: [15., 10.]
+
+GAIN: 1.0
+Jab: [0.068, -0.042, 0.13, -0.13]
+# Jab: [ 2.15034881, -1.32815662,  4.11096096, -4.11096096]
+Iext: [0.5, 0.0]
+M0: 1.0
+
+IF_LEARNING: 0
+
+SEED: 10
+STRUCTURE: ['ring', 'ring', 'ring', 'ring']
+SIGMA: [1.0, 0.25, 1.0, 0.25]
+
+TOLERANCE: 1.e-12
+MAXITER: 100
