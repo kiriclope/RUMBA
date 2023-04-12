@@ -3,18 +3,20 @@ from time import perf_counter
 from yaml import safe_load
 from tqdm import tqdm
 from scipy.special import erf, i0
+from scipy.sparse import csc_matrix
 from pandas import DataFrame, HDFStore, concat
 from numba import jit
 
 from decode import decode_bump
 from numba_con import generate_Cab, numba_update_Cij
+from mean_field_spec import get_mf_spec
 
 
 class Bunch(object):
   def __init__(self, adict):
       self.__dict__.update(adict)
 
-      
+
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
     into pandas DataFrame (with time series as pandas Series in cells)
@@ -60,18 +62,18 @@ def create_df(data):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def TF(x, thresh, tfname='TL',  gain=1.0):
+def TF(x, thresh=None, tfname='TL',  gain=1.0):
     if tfname=='TL':
-        # return x * (x > thresh)
-        return np.where(x > 0, x, 0)
-    if tfname=='NL':
-        return np.where(x >= 1.0, np.sqrt(4.0 * x - 3.0), x * x * (x > 0))
-    
+        return x * (x > 0)
+        # return np.where(x > 0, x, 0)
+    # if tfname=='NL':
+    #     return np.where(x >= 1.0, np.sqrt(4.0 * x - 3.0), x * x * (x > 0))
+
     # if tfname=='NL':
     #     x_nthresh = x**2 * (x > 0)
     #     x_thresh = (x>=thresh) * (np.sqrt(gain * np.abs(x)) - np.sqrt(gain * thresh) + thresh**2 - x**2)
     #     return  x_nthresh + x_thresh
-    
+
     # if tfname=='Sig':
     #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
     # elif tfname=='Sig':
@@ -81,23 +83,27 @@ def TF(x, thresh, tfname='TL',  gain=1.0):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF):
-    ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
-    ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
+def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, FF_DYN=0):
+    if FF_DYN:
+        ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
+        ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
+        return ff_inputs
+    else:
+        return ff_inputs_0
 
-    return ff_inputs
-
-
+    
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 
     if SYN_DYN == 0:
         for i_pop in range(inputs.shape[0]):
             inputs[i_pop] = np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
+            # inputs[i_pop] = Cij[:, csumNa[i_pop]:csumNa[i_pop+1]] @ rates[csumNa[i_pop]:csumNa[i_pop+1]]            
     else:
         for i_pop in range(inputs.shape[0]):
             inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop]
             inputs[i_pop] = inputs[i_pop] + np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
+            # inputs[i_pop] = inputs[i_pop] + Cij[:, csumNa[i_pop]:csumNa[i_pop+1]] @ rates[csumNa[i_pop]:csumNa[i_pop+1]]            
 
     return inputs
 
@@ -106,11 +112,11 @@ def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME, csumNa, EXP_DT_TAU_MEM, DT_TAU_MEM, RATE_DYN=0):
     net_inputs = ff_inputs
 
-    for i_pop in range(inputs.shape[0]): 
+    for i_pop in range(inputs.shape[0]):
         net_inputs = net_inputs + inputs[i_pop]
-    r = TF(net_inputs, thresh, TF_NAME)
-        
-    return r.astype(np.float32)
+    rates = TF(net_inputs, thresh, TF_NAME)
+
+    return rates
 
 
 class Network:
@@ -131,7 +137,7 @@ class Network:
 
         self.RATE_DYN = const.RATE_DYN
         self.SYN_DYN = const.SYN_DYN
-        
+
         # SIMULATION
         self.DT = const.DT
 
@@ -197,7 +203,7 @@ class Network:
 
         self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float32)
         self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float32)
-        
+
         self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float32)
         self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float32)
 
@@ -214,7 +220,7 @@ class Network:
         self.THRESH = np.array(const.THRESH, dtype=np.float32)
 
         self.M0 = const.M0
-
+       
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(self.N_POP, self.N_POP)
 
         print('Jab', self.Jab)
@@ -234,9 +240,13 @@ class Network:
         except:
             self.mf_rates = np.nan
 
-        for i_pop in range(self.N_POP):
-            self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop])
-
+        if self.SYN_DYN:
+            for i_pop in range(self.N_POP):
+                self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop])
+        else:
+            for i_pop in range(self.N_POP):
+                self.Jab[:, i_pop] = self.Jab[:, i_pop] / np.sqrt(self.Ka[i_pop])
+            
         # if self.N_POP>2:
         #     self.Jab[:2, -1] = self.Jab[:2,-1] * np.sqrt(self.Ka[-1]) / self.Ka[-1]
 
@@ -257,27 +267,34 @@ class Network:
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
         self.SIGMA = np.array(const.SIGMA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
 
-        self.ALPHA = self.Ka[0] 
-        self.ETA_DT = self.DT 
+        self.ALPHA = self.Ka[0]
+        self.ETA_DT = self.DT
 
         self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
         self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float32)
 
         if self.IF_NMDA:
             self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
-        rng = np.random.default_rng()
-        mean = [2, 2, 5]
-        var = [.5, .5, 1]
-        
-        for i_pop in range(self.N_POP):
-            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
-            
-            self.inputs[i_pop] = rng.normal(10, 10/4.0, self.N) 
 
-        self.inputs[-1] = (-1.0) * self.inputs[-1]
-            
+        rng = np.random.default_rng()
+        # random initial conditions
+        # mean = [2, 2, 5]
+        # var = [.5, .5, 1]
+
+        # for i_pop in range(self.N_POP):
+        #     # self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
+        #     self.inputs[i_pop] = rng.normal(10, 10/4.0, self.N)
+
+        # self.inputs[-1] = (-1.0) * self.inputs[-1]
+
+        # initial conditions from self consistent eqs
+        u0, u1, alpha = get_mf_spec("configEE") 
+        for i_pop in range(self.N_POP):
+            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[i_pop] + np.sqrt(alpha[i_pop])
+                                                                     * rng.standard_normal(self.Na[i_pop], dtype=np.float32))
+
         print(self.rates[:5])
-        
+
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
         self.thresh = np.ones( (self.N,), dtype=np.float32)
@@ -304,10 +321,7 @@ class Network:
             self.inputs[i_pop] = self.inputs[i_pop] + np.dot(Cab, rb)
 
     def update_rates(self):
-        if self.FF_DYN==0:
-            net_inputs = self.ff_inputs_0
-        else:
-            net_inputs = self.ff_inputs
+        net_inputs = self.ff_inputs
 
         for i_pop in range(self.N_POP):
             net_inputs = net_inputs + self.inputs[i_pop]
@@ -320,18 +334,24 @@ class Network:
             self.rates = TF(net_inputs, self.thresh, self.TF_NAME)
         else:
             for i_pop in range(self.N_POP):
-                # idx = np.arange(self.csumNa[i_pop], self.csumNa[i_pop+1], 1)
-                self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.EXP_DT_TAU_MEM[i_pop]
-                self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + self.DT_TAU_MEM[i_pop] * TF(net_inputs[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.TF_NAME, self.TF_GAIN)
+                idx = np.arange(self.csumNa[i_pop], self.csumNa[i_pop+1], 1)
+                self.rates[idx] = self.rates[idx] * self.EXP_DT_TAU_MEM[i_pop]
+                self.rates[idx] = self.rates[idx] + self.DT_TAU_MEM[i_pop] * TF(net_inputs[idx], self.thresh[idx], self.TF_NAME, self.TF_GAIN)
+
+                # self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.EXP_DT_TAU_MEM[i_pop]
+                # self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + self.DT_TAU_MEM[i_pop] * TF(net_inputs[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]], self.TF_NAME, self.TF_GAIN)
 
     def update_thresh(self):
         self.thresh = self.thresh * self.EXP_DT_TAU_MEM[0]
         self.thresh = self.thresh + self.DT_TAU_MEM[0] * self.THRESH[0]
 
     def update_ff_inputs(self):
-        self.ff_inputs = self.ff_inputs * self.EXP_DT_TAU_FF[0]
-        self.ff_inputs = self.ff_inputs + self.DT_TAU_FF[0] * self.ff_inputs_0
-
+        if ff_DYN:
+            self.ff_inputs = self.ff_inputs * self.EXP_DT_TAU_FF[0]
+            self.ff_inputs = self.ff_inputs + self.DT_TAU_FF[0] * self.ff_inputs_0
+        else:
+            self.ff_inputs = self.ff_inputs_0
+            
     def perturb_inputs(self, step):
         NE = self.Na[0]
         NI = self.Na[0] + self.Na[1]
@@ -382,7 +402,8 @@ class Network:
     def run(self):
         NE = self.Na[0]
         Cij = np.ascontiguousarray(self.generate_Cij())
-
+        # Cij = csc_matrix(Cij, dtype=np.float32)
+        
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
@@ -393,19 +414,16 @@ class Network:
 
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
-            
-            if self.FF_DYN:
-                # self.update_ff_inputs()
-                self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF)
-                
-            self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN)
 
+            # self.update_ff_inputs()
+            self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF, self.FF_DYN)
+            self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
 
             self.update_rates()
             # self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
-            
+
             if self.IF_LEARNING:
                 Cij = self.update_Cij(Cij)
 
@@ -420,18 +438,18 @@ class Network:
                 if running_step >= self.N_WINDOW:
                     amplitudes = []
                     phases = []
-                    
+
                     data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
 
                     print('time (ms)', np.round(step/self.N_STEPS, 2),
                           'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
                           np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
                           np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
-                    
+
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
                     phases.append(phase)
-                    
+
                     m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
                     amplitudes.append(m1)
                     phases.append(phase)
@@ -440,9 +458,9 @@ class Network:
                         m1, phase = decode_bump(self.rates[self.csumNa[2]:])
                         amplitudes.append(m1)
                         phases.append(phase)
-                    
+
                     print('m1', amplitudes, 'phase', phases)
-                    
+
                     running_step = 0
 
         self.Cij = Cij
@@ -461,7 +479,7 @@ class Network:
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./config_bestue.yml", "r"))
+    config = safe_load(open("./configEE.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()

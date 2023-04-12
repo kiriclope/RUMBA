@@ -16,11 +16,15 @@ def u_theta(theta, u0, u1):
 
 
 def quench_avg_Phi(u, alpha):
-    # Sigmoid
-    # return 0.5 * erfc((1.0-u) / np.sqrt(2.0 * np.abs(alpha))) * (alpha>0)
+    # # Sigmoid
+    # if alpha > 0:    
+    #     return 0.5 * erfc((1.0-u) / np.sqrt(2.0 * np.abs(alpha))) * (alpha>0)
+    # else:
+    #     return 10000.0
+        
     # threshold linear
     if alpha > 0:
-        return ( 0.5 * u * erf(u / np.sqrt(2.0 * alpha) + 1.0) + np.sqrt(alpha / 2.0 / np.pi) * np.exp((-u**2)/(2.0 * alpha)) )
+        return ( 0.5 * u * erf(u / np.sqrt(2.0 * alpha) + 1.0) + np.sqrt(alpha / 2.0 / np.pi) * np.exp(-u*u/(2.0 * alpha)) )
     else:
         return np.nan
 
@@ -34,12 +38,12 @@ def integrand2(theta, u0, u1, alpha):
 
 
 def m0_func(u0, u1, alpha):
-    if alpha <= 0 :
+    if alpha <= 0:
         res = np.nan
     else:
-        res, err = quad(integrand, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=50)
-    # res, err = quadrature(integrand, 0, np.pi, args=(u0, u1, alpha), miniter=40)
-    # res, err = quad_vec(integrand, 0, np.pi, args=(u0, u1, alpha), workers=-1)
+        res, err = quad(integrand, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=500)
+        # res, err = quadrature(integrand, 0, 2.0 * np.pi, args=(u0, u1, alpha), miniter=100, maxiter=1000)
+        # res, err = quad_vec(integrand, 0, np.pi, args=(u0, u1, alpha), workers=-1)
     return res / 2.0 / np.pi
 
 
@@ -47,9 +51,9 @@ def m1_func(u0, u1, alpha):
     if alpha <= 0:
         res = np.nan
     else:
-        res, err = quad(integrand2, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=50)
-    # res, err = quadrature(integrand2, 0, np.pi, args=(u0, u1, alpha), miniter=40)
-    # res, err = quad_vec(integrand2, 0, np.pi, args=(u0, u1, alpha), workers=-1)
+        res, err = quad(integrand2, 0, 2.0 * np.pi, args=(u0, u1, alpha), limit=500)
+        # res, err = quadrature(integrand2, 0, 2.0 * np.pi, args=(u0, u1, alpha), miniter=100, maxiter=1000)
+        # res, err = quad_vec(integrand2, 0, np.pi, args=(u0, u1, alpha), workers=-1)
     return res * 1.0 / np.pi
 
 
@@ -88,6 +92,7 @@ class MeanFieldSpec:
 
         self.Jab = np.array(const.Jab, dtype=np.float32).reshape(self.N_POP, self.N_POP)
         print('Jab', self.Jab)
+        
         self.Iext = np.array(const.Iext, dtype=np.float32)
         print('Iext', self.Iext)
 
@@ -111,12 +116,13 @@ class MeanFieldSpec:
             pass
         
         self.initial_guess = np.random.rand(3* self.N_POP)
+        self.initial_guess[2*self.N_POP:3*self.N_POP] = np.abs(self.initial_guess[2*self.N_POP:3*self.N_POP])
 
     def self_consistent_eqs(self, x):
 
         u0 = x[:self.N_POP] # mean input
         u1 = x[self.N_POP:2*self.N_POP] # first fourier moment of the input
-        alpha = np.abs(x[2*self.N_POP:3*self.N_POP]) # variance
+        alpha = x[2*self.N_POP:3*self.N_POP] # variance
         
         m0 = m0_func(u0, u1, alpha)
         u0_eq = u0 / np.sqrt(self.K) - (self.Iext + np.dot(self.Jab, m0))
@@ -141,6 +147,8 @@ class MeanFieldSpec:
         while any( self.error > self.TOLERANCE ):
             
             self.initial_guess = np.random.rand(3 * self.N_POP) * 2.0 - 1.0
+            self.initial_guess[2*self.N_POP:3*self.N_POP] = np.abs(self.initial_guess[2*self.N_POP:3*self.N_POP])
+
             self.result = root(self.self_consistent_eqs, self.initial_guess, method='hybr', tol=self.TOLERANCE)
             self.error = self.self_consistent_eqs(self.result.x)
             self.solutions()
@@ -162,32 +170,32 @@ class MeanFieldSpec:
     def solutions(self):
 
         try:
-            u0 = self.result.x[:self.N_POP] # mean input
-            u1 = self.result.x[self.N_POP:2*self.N_POP] # first fourier moment
-            alpha = self.result.x[2*self.N_POP:3*self.N_POP] # variance
+            self.u0 = self.result.x[:self.N_POP] # mean input
+            self.u1 = self.result.x[self.N_POP:2*self.N_POP] # first fourier moment
+            self.alpha = self.result.x[2*self.N_POP:3*self.N_POP] # variance
         except:
-            u0 = self.initial_guess[:self.N_POP]
-            u1 = self.initial_guess[self.N_POP:2*self.N_POP]
-            alpha = self.initial_guess[2*self.N_POP:3*self.N_POP]
+            self.u0 = self.initial_guess[:self.N_POP]
+            self.u1 = self.initial_guess[self.N_POP:2*self.N_POP]
+            self.alpha = self.initial_guess[2*self.N_POP:3*self.N_POP]
 
-        self.m0 = m0_func(u0, u1, alpha)
-        self.m1 = m1_func(u0, u1, alpha)
+        self.m0 = m0_func(self.u0, self.u1, self.alpha)
+        self.m1 = m1_func(self.u0, self.u1, self.alpha)
 
-        # print('m0', self.m0, 'm1', self.m1)
+        print('m0', self.m0, 'm1', self.m1)
 
     def bifurcation(self):
         self.m0_list = []
         self.m1_list = []
 
-        self.kappas = np.linspace(6, 8, 10)
+        self.kappas = np.linspace(5, 7, 20)
         for kappa in self.kappas:
             self.kappa[0][0] = kappa
-            # self.kappa[0][1] = 0.5 * kappa 
-            # self.kappa[1][0] = kappa
-            # self.kappa[1][1] = 0.5 * kappa
+            # self.kappa[0][1] = kappa 
+            # self.kappa[1][0] = kappa * np.sqrt(self.K)
+            # self.kappa[1][1] = kappa 
            
             self.kappa_Jab = self.Jab * self.kappa
-
+            
             self.solve()
             self.m0_list.append(self.m0)
             self.m1_list.append(self.m1)
@@ -196,23 +204,33 @@ class MeanFieldSpec:
 
         self.m0_list = np.array(self.m0_list).T
         self.m1_list = np.array(self.m1_list).T
+
         
+def get_mf_spec(configname):
+    config = safe_load(open(configname + ".yml", "r"))
+    model = MeanFieldSpec(**config)
+    model.solve()    
+    return model.u0, model.u1, model.alpha
+
+
 if __name__ == "__main__":
 
     config = safe_load(open("./configEE.yml", "r"))
     model = MeanFieldSpec(**config)
     model.solve()
     print('m0', model.m0, 'm1', model.m1)
-    fig, ax = plt.subplots(1,2)
-    for iter in range(10):
-        print('iter', iter)
-        model.bifurcation()
+    # fig, ax = plt.subplots(1,2)
+    # for iter in range(10):
+    #     print('iter', iter)
+    #     model.bifurcation()
     
-        ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
-        # ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'ko')
-        # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
+    #     ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
+    #     # ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'bo')
+    #     # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
     
-        ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
-        # ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'ko')
-        # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
+    #     ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
+    #     # ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'bo')
+    #     # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
 
+# time (ms) 0.51 rates (Hz) 2.13 1.94 7.93                                      m1 [1.684284222727726, 0.014557055152563577, 0.1060402058343321] phase [6.1565670423138235, 0.6032182257584423, 5.247377906540058]
+    
