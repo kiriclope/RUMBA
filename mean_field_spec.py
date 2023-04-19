@@ -20,9 +20,9 @@ def quench_avg_Phi(u, alpha):
     # if alpha > 0:    
     #     return 0.5 * erfc((1.0-u) / np.sqrt(2.0 * np.abs(alpha))) * (alpha>0)
     # else:
-    #     return 10000.0
+    #     return np.nan
         
-    # threshold linear
+    # # # threshold linear
     if alpha > 0:
         return ( 0.5 * u * erf(u / np.sqrt(2.0 * alpha) + 1.0) + np.sqrt(alpha / 2.0 / np.pi) * np.exp(-u*u/(2.0 * alpha)) )
     else:
@@ -60,6 +60,7 @@ def m1_func(u0, u1, alpha):
 m0_func = np.vectorize(m0_func)
 m1_func = np.vectorize(m1_func)
 
+
 class MeanFieldSpec:
 
     def __init__(self, **kwargs):
@@ -96,6 +97,8 @@ class MeanFieldSpec:
         self.Iext = np.array(const.Iext, dtype=np.float32)
         print('Iext', self.Iext)
 
+        # self.Iext[0] = self.Iext[0] / np.sqrt(self.K)
+        
         self.Jab *= const.GAIN
         self.Jab[np.isinf(self.Jab)] = 0
 
@@ -162,6 +165,8 @@ class MeanFieldSpec:
 
             if counter >= self.MAXITER :
                 print('ERROR: max number of iterations reached')
+                self.m0 = np.nan * np.ones(self.N_POP)
+                self.m1 = np.nan * np.ones(self.N_POP)
                 # print('error', self.error > self.TOLERANCE)
                 break
 
@@ -181,17 +186,21 @@ class MeanFieldSpec:
         self.m0 = m0_func(self.u0, self.u1, self.alpha)
         self.m1 = m1_func(self.u0, self.u1, self.alpha)
 
-        print('m0', self.m0, 'm1', self.m1)
+        # print('m0', self.m0, 'm1', self.m1)
 
     def bifurcation(self):
         self.m0_list = []
         self.m1_list = []
 
-        self.kappas = np.linspace(5, 7, 20)
+        self.kappas = np.linspace(5, 10, 20)
         for kappa in self.kappas:
-            self.kappa[0][0] = kappa
+            self.kappa[0][0] = kappa 
+            # self.kappa[1][1] = kappa
+            
             # self.kappa[0][1] = kappa 
-            # self.kappa[1][0] = kappa * np.sqrt(self.K)
+            # self.kappa[1][1] = kappa 
+            # self.kappa[0][1] = .5 * kappa 
+            # self.kappa[1][0] = kappa 
             # self.kappa[1][1] = kappa 
            
             self.kappa_Jab = self.Jab * self.kappa
@@ -200,7 +209,7 @@ class MeanFieldSpec:
             self.m0_list.append(self.m0)
             self.m1_list.append(self.m1)
             
-            print(self.kappa[0][0], 'm0', self.m0, 'm1', self.m1)
+            print(kappa, 'm0', self.m0, 'm1', self.m1)
 
         self.m0_list = np.array(self.m0_list).T
         self.m1_list = np.array(self.m1_list).T
@@ -219,18 +228,18 @@ if __name__ == "__main__":
     model = MeanFieldSpec(**config)
     model.solve()
     print('m0', model.m0, 'm1', model.m1)
-    # fig, ax = plt.subplots(1,2)
-    # for iter in range(10):
-    #     print('iter', iter)
-    #     model.bifurcation()
+    fig, ax = plt.subplots(1,2)
+    for iter in range(10):
+        print('iter', iter)
+        model.bifurcation()
     
-    #     ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
-    #     # ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'bo')
-    #     # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
+        ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
+        ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'bo')
+        # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
     
-    #     ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
-    #     # ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'bo')
-    #     # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
+        ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
+        ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'bo')
+        # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
 
 # time (ms) 0.51 rates (Hz) 2.13 1.94 7.93                                      m1 [1.684284222727726, 0.014557055152563577, 0.1060402058343321] phase [6.1565670423138235, 0.6032182257584423, 5.247377906540058]
     

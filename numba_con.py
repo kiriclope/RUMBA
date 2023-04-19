@@ -1,5 +1,19 @@
 import numpy as np
-from numba import jit
+from numba import jit, njit
+from scipy.special import i0
+
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def gaussian(theta, kappa):
+    if kappa > 0:
+        return np.exp(-theta**2 / 2.0 / kappa**2) / np.sqrt(2.0 * np.pi) / kappa 
+    else:
+        return np.ones(theta.shape)
+    
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def von_mises(theta, kappa):
+    return np.exp(kappa * np.cos(theta)) / (2.0 * np.pi * i0(kappa))
+
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
@@ -11,6 +25,7 @@ def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
     
     # Cij = np.where(Cij, Cij + ETA_DT * np.outer(rates, rates), 0)
     return Cij
+
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def theta_mat(theta, phi):
@@ -32,22 +47,31 @@ def strided_method(ar):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_i0(*args):
+    return i0(*args)
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
     Pij = np.zeros((Na, Nb), dtype=np.float32)
-    Cij = np.zeros((Na, Nb), dtype=np.int32)
-
+    Cij = np.zeros((Na, Nb), dtype=np.float32)
+    
     print('random connectivity')
     if STRUCTURE != 'None':
         theta = np.linspace(0.0, 2.0 * np.pi, Nb)
-        theta = theta.astype(np.float32)
-
         phi = np.linspace(0.0, 2.0 * np.pi, Na)
-        phi = phi.astype(np.float32)
 
+        if 'perm' in STRUCTURE:
+            print('permuted map')
+            theta = np.random.permutation(theta)
+            # phi = np.random.permutation(phi)
+            
+        theta = theta.astype(np.float32)
+        phi = phi.astype(np.float32)
+            
         theta_ij = theta_mat(theta, phi)
         cos_ij = np.cos(theta_ij + PHASE)
-
+            
         if 'lateral' in STRUCTURE:
             cos2_ij = np.cos(2.0 * theta_ij)
             print('lateral')
@@ -73,9 +97,40 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
     elif "weak" in STRUCTURE:
         print('with weak proba')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
-                
-    Pij[:, :] = Pij[:, :] + 1.0
-    Cij = (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
+        Pij[:, :] = np.float32(SIGMA) / np.sqrt(Kb)
+        Pij[:, :] = Pij[:, :] - 1.0
+        
+    elif "gauss" in STRUCTURE:
+        Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
+    
+    if "all" in STRUCTURE:
+        print('with all to all cosine structure')
+        # Pij[:, :] = Pij[:, :] * np.float32(SIGMA) 
+        # Cij[:, :] = (Pij[:, :] + 1.0)
+        
+        # Cij[:, :] = Cij[:, :] * (Cij>=0)
+        
+        # Z = Nb / np.sum(Cij, axis=1) / (2.0 * np.pi)
+        # Cij[:, :] = Cij[:, :] * Z
+        
+        # Cij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
+        # Z = Nb / np.sum(Cij, axis=1)
+        # Cij[:, :] = Cij[:, :] * Z
+        
+        Cij[:, :] = von_mises(theta_ij, np.float64(SIGMA))
+        # Pij[:, :] = SIGMA * Pij[:, :]
+        # Cij[:, :] = np.exp(Pij[:, :])
+        # Cij[:, :] = Cij[:, :] / 2.0 * np.pi * numba_i0(np.float64(SIGMA))
+    
+    else:
+        Pij[:, :] = Pij[:, :] + 1.0
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
     
     return Cij
+
+
+
+
+
+
+

@@ -88,7 +88,7 @@ def con_profile(Cij, ax=None):
     else:
         ax.plot(diags)
         ax.set_xticklabels([])
-        ax.set_yticklabels([])
+        # ax.set_yticklabels([])
 
     plt.xlabel('Neuron #')
     plt.ylabel('K')
@@ -161,8 +161,12 @@ def spatial_profile(df, window=10):
     
     mean_df = df1.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
-
+    
+    m1, phase = decode_bump(array)
+    
     smooth = circcvl(array[:, 0], windowSize=250)
+    print(smooth.shape)
+    smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0])) 
 
     plt.plot(smooth)
     plt.xlabel('Neuron #')
@@ -179,7 +183,7 @@ def init(frames, ax):
     
 def animate(frame, frames, line):
     line.set_ydata(frames[frame])
-        
+    
     
 def animated_bump(df, window=250):
 
@@ -226,7 +230,7 @@ def line_phase(df):
     phase *= 180.0 / np.pi 
     width=7
     fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
-
+    
     m0 = np.nanmean(array, -1)
     
     ax[0].plot(times, m0) 

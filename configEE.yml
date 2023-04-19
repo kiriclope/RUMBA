@@ -2,13 +2,13 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 1000.0
+DURATION: 150.0
 
-T_STEADY: 500.0
+T_STEADY: 30.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 750.0
-T_STIM_OFF: 800.0
+T_STIM_ON: 50.0
+T_STIM_OFF: 100.0
 I0: [0.5, 0.0, 0.0]
 PHI0: None
 SIGMA_EXT: .25
@@ -21,9 +21,10 @@ N_POP: 3
 N: 30000
 K: 1000
 frac: [.333333333333333335, .333333333333333335, .333333333333333335]
+# frac: [.6, .2, .2]
 
 SYN_DYN: 0
-TAU_SYN: [4., 4., 2.]
+TAU_SYN: [6., 6., 2.]
 
 IF_NMDA: 0
 TAU_NMDA: [4., 4., 2.]
@@ -35,7 +36,7 @@ THRESH_DYN: 0
 THRESH: [0.0, 0.0, 0.0]
 
 RATE_DYN: 1
-TAU_MEM: [6., 6., 2.]
+TAU_MEM: [3., 3., 1.]
 
 GAIN: 1.0
 Jab: [0.44, 0.44, -0.28, 0.44, 0.44, -0.28, 0.67, 0.67, -0.34]
@@ -45,7 +46,7 @@ M0: 1.0
 
 SEED: 10
 STRUCTURE: ['spec', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None']
-SIGMA: [6.5, 0., 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+SIGMA: [5.0, 0., 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 IF_LEARNING: 0
 
