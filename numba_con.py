@@ -4,11 +4,14 @@ from scipy.special import i0
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def gaussian(theta, kappa):
-    if kappa > 0:
-        return np.exp(-theta**2 / 2.0 / kappa**2) / np.sqrt(2.0 * np.pi) / kappa 
+def gaussian(theta, sigma):
+    sigma = sigma * np.pi / 180.0
+    
+    if sigma > 0:
+        return np.exp(-theta**2 / 2.0 / sigma**2) / np.sqrt(2.0 * np.pi) / sigma 
     else:
         return np.ones(theta.shape)
+
     
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def von_mises(theta, kappa):
@@ -17,9 +20,6 @@ def von_mises(theta, kappa):
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
-    # norm = np.where(Cij, ALPHA * Cij * rates**2, 0)
-    # Cij = np.where(Cij, (Cij + ETA_DT * (np.outer(rates, rates) - norm)), 0)
-
     norm = np.where(Cij, ALPHA * Cij * rates**2, 0)
     Cij = Cij + ETA_DT * (np.outer(rates, rates) - norm)
     
@@ -31,9 +31,13 @@ def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
 def theta_mat(theta, phi):
     theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
 
+    twopi = np.float32(2.0 * np.pi)
+    
     for i in range(phi.shape[0]):
         for j in range(theta.shape[0]):
-            theta_mat[i, j] = phi[i] - theta[j]
+            # theta_mat[i, j] = phi[i] - theta[j]
+            dtheta = np.abs(phi[i] - theta[j])
+            theta_mat[i, j] = np.minimum(dtheta, twopi - dtheta)
 
     return theta_mat
 
@@ -51,7 +55,7 @@ def numba_i0(*args):
     return i0(*args)
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
+def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PHASE=0):
 
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.float32)
@@ -69,7 +73,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
         theta = theta.astype(np.float32)
         phi = phi.astype(np.float32)
             
-        theta_ij = theta_mat(theta, phi)
+        theta_ij = theta_mat(theta, phi) 
         cos_ij = np.cos(theta_ij + PHASE)
             
         if 'lateral' in STRUCTURE:
@@ -81,24 +85,11 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
 
     if "ring" in STRUCTURE:
         print('with strong cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA)
+        Pij[:, :] = Pij[:, :] * np.float32(KAPPA)
 
-    elif "spec" in STRUCTURE:
-        print('with weak cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / np.sqrt(Kb)
-
-    elif "small" in STRUCTURE:
-        print('with very weak cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb
-
-    elif "dense" in STRUCTURE:
-        print('with dense cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(SIGMA) / Kb * np.sqrt(Nb)
-
-    elif "weak" in STRUCTURE:
-        print('with weak proba')
-        Pij[:, :] = np.float32(SIGMA) / np.sqrt(Kb)
-        Pij[:, :] = Pij[:, :] - 1.0
+    elif "spec_cos" in STRUCTURE:
+        print('with spec cosine structure')
+        Pij[:, :] = Pij[:, :] * np.float32(KAPPA) / np.sqrt(Kb)
         
     elif "gauss" in STRUCTURE:
         Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
@@ -117,20 +108,22 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, SEED=None, PHASE=0):
         # Z = Nb / np.sum(Cij, axis=1)
         # Cij[:, :] = Cij[:, :] * Z
         
-        Cij[:, :] = von_mises(theta_ij, np.float64(SIGMA))
-        # Pij[:, :] = SIGMA * Pij[:, :]
-        # Cij[:, :] = np.exp(Pij[:, :])
-        # Cij[:, :] = Cij[:, :] / 2.0 * np.pi * numba_i0(np.float64(SIGMA))
-    
-    else:
+        Cij[:, :] = von_mises(theta_ij, np.float64(KAPPA))
+
+    elif STRUCTURE == "gauss":
+        print('with strong gauss proba') 
+        Z = Kb / np.sum(Pij, axis=1) 
+        Pij[:, :] = Pij[:, :] * Z 
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+        
+    elif "spec_gauss" in STRUCTURE:
+        print('with spec gauss proba') 
+        Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1) 
+        Pij[:, :] = Kb / Nb + Pij[:, :] * Z 
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+        
+    else:        
         Pij[:, :] = Pij[:, :] + 1.0
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
     
     return Cij
-
-
-
-
-
-
-

@@ -63,18 +63,13 @@ def create_df(data):
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def TF(x, thresh=None, tfname='TL', tfgain=1):
-    # if tfname=='TL':
-    #     return x * (x > 0) 
-    # # return np.where(x > 0, x, 0)
     # if tfname=='NL':
-    # return (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
-    return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
+    #     # return (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
+    #     return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
+    # else:
+    # return np.where(x > 0, x, 0)
 
-    # if tfname=='NL':
-    #     x_nthresh = x**2 * (x > 0)
-    #     x_thresh = (x>=thresh) * (np.sqrt(gain * np.abs(x)) - np.sqrt(gain * thresh) + thresh**2 - x**2)
-    #     return  x_nthresh + x_thresh
-
+    return x * (x > 0)
     # if tfname=='Sig':
     #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
     # elif tfname=='Sig':
@@ -276,6 +271,7 @@ class Network:
 
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
         self.SIGMA = np.array(const.SIGMA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
+        self.KAPPA = np.array(const.KAPPA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
 
         self.ALPHA = self.Ka[0]
         self.ETA_DT = self.DT
@@ -391,7 +387,7 @@ class Network:
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
                 Cab = generate_Cab(self.Ka[j_pre], self.Na[i_post], self.Na[j_pre],
-                    self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.SEED)
+                    self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED)
                 Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab * self.Jab[i_post][j_pre]
 
         return Cij
@@ -496,7 +492,7 @@ class Network:
 if __name__ == "__main__":
 
     # set_num_threads(50)
-    config = safe_load(open("./config_bestue.yml", "r"))
+    config = safe_load(open("./config.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
