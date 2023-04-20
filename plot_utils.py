@@ -80,7 +80,7 @@ def plot_con(Cij):
 def con_profile(Cij, ax=None):
     diags = []
     for i in range(int(Cij.shape[0]/2)):
-        diags.append(np.trace(Cij, offset=i))
+        diags.append(np.trace(Cij, offset=i) / Cij.shape[0])
 
     diags = np.array(diags)
     if ax is None:
@@ -91,7 +91,7 @@ def con_profile(Cij, ax=None):
         # ax.set_yticklabels([])
 
     plt.xlabel('Neuron #')
-    plt.ylabel('K')
+    plt.ylabel('$P_{ij}$')
 
 
 def line_rates(df):

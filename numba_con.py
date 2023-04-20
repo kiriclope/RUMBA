@@ -2,6 +2,19 @@ import numpy as np
 from numba import jit, njit
 from scipy.special import i0
 
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_DJij(DJij, rates, EXP_DT_TAU, KAPPA_DT_TAU, ALPHA):
+    
+    # DJij = (DJij>0) * DJij * EXP_DT_TAU
+    
+    norm = ALPHA * DJij * rates**2 
+    # DJij = DJij + KAPPA_DT_TAU *(np.outer(rates, rates) - norm)
+    DJij = KAPPA_DT_TAU * (np.outer(rates, rates) - norm)
+    print(np.mean(DJij))    
+    
+    # print(np.mean(DJij), np.mean(KAPPA_DT_TAU * np.outer(rates, rates)))
+    
+    return DJij
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def gaussian(theta, sigma):
@@ -20,10 +33,10 @@ def von_mises(theta, kappa):
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
-    norm = np.where(Cij, ALPHA * Cij * rates**2, 0)
+    norm = (Cij>0) * ALPHA * Cij * rates**2 
     Cij = Cij + ETA_DT * (np.outer(rates, rates) - norm)
+    print(np.mean(Cij))
     
-    # Cij = np.where(Cij, Cij + ETA_DT * np.outer(rates, rates), 0)
     return Cij
 
 
@@ -32,13 +45,12 @@ def theta_mat(theta, phi):
     theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
 
     twopi = np.float32(2.0 * np.pi)
-    
+
     for i in range(phi.shape[0]):
         for j in range(theta.shape[0]):
-            # theta_mat[i, j] = phi[i] - theta[j]
             dtheta = np.abs(phi[i] - theta[j])
             theta_mat[i, j] = np.minimum(dtheta, twopi - dtheta)
-
+    
     return theta_mat
 
 
@@ -118,9 +130,36 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         
     elif "spec_gauss" in STRUCTURE:
         print('with spec gauss proba') 
+        # Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1)
+        # Pij[:, :] = Kb / Nb + Pij[:, :] * Z        
+
+        # Pij[:, :] = 1.0 + KAPPA / np.sqrt(Kb) * Pij[:, :]
+        # Z = Kb / np.sum(Pij, axis=1) 
+        # Pij[:, :] = Pij[:, :] * Z
+        
+        # Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1) 
+        # Pij[:, :] = (Kb - KAPPA * np.sqrt(Kb)) / Nb + Pij[:, :] * Z
+
+        # Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1) 
+        # Pij[:, :] = (Kb - KAPPA * np.sqrt(Kb)) / Nb + Pij[:, :] * Z
+
+        # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+        
         Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1) 
-        Pij[:, :] = Kb / Nb + Pij[:, :] * Z 
-        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+        Pij[:, :] = Pij[:, :] * Z 
+        
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < Pij)
+
+    elif "spec_rand" in STRUCTURE:
+        print("with random spec")
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
+        
+        # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < KAPPA * np.sqrt(Kb) /Nb)
+
+    elif "spec_cos_rand" in STRUCTURE:
+        print("with random cos spec")
+        Pij[:, :] = np.sqrt(Kb) * Pij[:, :] + 1.0
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
         
     else:        
         Pij[:, :] = Pij[:, :] + 1.0
