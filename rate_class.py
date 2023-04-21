@@ -8,7 +8,7 @@ from pandas import DataFrame, HDFStore, concat
 from numba import jit, set_num_threads
 
 from decode import decode_bump
-from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij
+from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij, numba_multiple_maps
 from mean_field_spec import get_mf_spec, m0_func
 from stp_utils import STP_Model, numba_markram_stp
 
@@ -98,7 +98,7 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] = np.random.normal(0, VAR_FF[0], ff_inputs.shape[0]) + ff_inputs_0
+        ff_inputs[:] = np.random.normal(0, VAR_FF[0], ff_inputs.shape[0]) + ff_inputs_0        
     else:
         ff_inputs = ff_inputs_0
     
@@ -148,8 +148,6 @@ class Network:
 
         const = Bunch(kwargs)
 
-        self.IF_LEARNING = const.IF_LEARNING
-
         self.SAVE = const.SAVE
         self.verbose = const.verbose
         if self.verbose:
@@ -194,6 +192,8 @@ class Network:
         self.EXP_DT_TAU_SYN = []
         self.DT_TAU_SYN = []
 
+        self.IF_STP = const.IF_STP
+        
         self.IF_NMDA = const.IF_NMDA
         if self.IF_NMDA:
             self.TAU_NMDA = const.TAU_NMDA
@@ -292,13 +292,19 @@ class Network:
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
         self.SIGMA = np.array(const.SIGMA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
         self.KAPPA = np.array(const.KAPPA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
+
+        # LEARNING
+        self.IF_LEARNING = const.IF_LEARNING
+        self.TAU_LEARN = 1.0
+        self.DT_TAU_LEARN = self.DT / self.TAU_LEARN 
         
-        # self.KAPPA_DT_TAU = np.float32(self.KAPPA[0][0] / np.sqrt(self.Ka[0]) * self.DT / self.TAU_SYN[0])
-        self.KAPPA_DT_TAU = np.float32(self.KAPPA[0][0] / self.Ka[0])
+        # self.KAPPA_LEARN = 1.0
+        self.KAPPA_LEARN = np.float32(self.KAPPA[0][0] / np.sqrt(self.Ka[0]))
+        self.EXP_DT_TAU_LEARN = np.exp(-self.DT / self.TAU_LEARN, dtype=np.float32)
         
         self.ALPHA = self.Ka[0]
         self.ETA_DT = self.DT / self.TAU_SYN[0]
-
+        
         self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
         self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float32)
         
@@ -415,6 +421,7 @@ class Network:
 
         return Cij
 
+    
     def generate_Cij_NMDA(self, Cij):
         Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float32)
 
@@ -440,36 +447,51 @@ class Network:
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
+        if self.IF_STP:
+            Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
+            Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
+            stp = STP_Model(self.Na[0], self.DT)
+            
         if self.IF_LEARNING:
             DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float32)
+            Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
+            # N_MAPS = 10
+            # Jij = numba_multiple_maps(self.Ka[0], self.Na[0], self.KAPPA[0][0], N_MAPS)
+            # Cij[:self.Na[0],:self.Na[0]] = Cij[:self.Na[0],:self.Na[0]] * (1.0 + Jij)
             
         self.print_params()
 
         running_step = 0
         data = []
-
+        
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
             
             # self.update_ff_inputs()
             self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF, self.VAR_FF, self.FF_DYN)
 
+            if self.IF_STP:
+                stp.markram_stp(self.rates[:self.Na[0]]) 
+                # stp.hansel_stp(self.rates[:self.Na[0]])
+                # print(self.Jab[0][0], np.mean(stp.A_u_x_stp))
+                Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
+            
             # self.update_inputs(Cij)
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
-
+                
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
             
             if self.IF_LEARNING:
-                # Cij = self.update_Cij(Dij)
-                
+                # Cij = self.update_Cij(Dij)                
                 # DJij = numba_update_Cij(DJij, self.rates[:self.Na[0]], ALPHA=self.ALPHA, ETA_DT=self.ETA_DT)
-                
-                DJij = numba_update_DJij(DJij, self.rates[:self.Na[0]], self.EXP_DT_TAU_SYN[0], self.KAPPA_DT_TAU, self.ALPHA)
-                Cij[:self.Na[0],:self.Na[0]] = Cij[:self.Na[0],:self.Na[0]] * (1.0 + DJij)
+            
+                if step >= self.N_STIM_ON and step < self.N_STIM_OFF:
+                    DJij = numba_update_DJij(DJij, self.rates[:self.Na[0]], self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA)
+                    Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
                 
             if self.THRESH_DYN==0:
                 self.update_thresh()

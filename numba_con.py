@@ -2,16 +2,77 @@ import numpy as np
 from numba import jit, njit
 from scipy.special import i0
 
+
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_DJij(DJij, rates, EXP_DT_TAU, KAPPA_DT_TAU, ALPHA):
+def numba_normal(size):
+    res = np.zeros(size)
+    for i in range(res.shape[0]):
+        for j in range(res.shape[0]):
+            res[i,j] = np.random.standard_normal()
     
-    # DJij = (DJij>0) * DJij * EXP_DT_TAU
+    return res
+
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_multiple_maps(K, N, KAPPA, N_MAPS):
+
+    KAPPA_ = KAPPA / np.sqrt(K) / N_MAPS
+
+    # Jij = np.zeros((N, N))
+    # theta = np.linspace(0.0, 2.0 * np.pi, np.int(K))
+    # Jij[:K,:K] = KAPPA_ * np.cos(theta_mat(theta, theta))
     
-    norm = ALPHA * DJij * rates**2 
-    # DJij = DJij + KAPPA_DT_TAU *(np.outer(rates, rates) - norm)
-    DJij = KAPPA_DT_TAU * (np.outer(rates, rates) - norm)
-    print(np.mean(DJij))    
+    theta = np.linspace(0.0, 2.0 * np.pi, N)
+    Jij = KAPPA_ * np.cos(theta_mat(theta, theta))
     
+    for _ in range(N_MAPS-1):
+        
+        # theta = np.random.permutation(theta)
+        theta = np.linspace(0.0, 2.0 * np.pi, N)        
+        neurons = np.zeros(np.int(N-K)).astype(np.int64)
+        
+        for i in range(N-K):
+            neurons[i] = np.random.randint(N)
+        # print(neurons)
+
+        theta_ = theta[neurons]
+        theta[neurons] = np.random.permutation(theta_)
+        
+        DJij = np.cos(theta_mat(theta, theta))
+        Jij = Jij + KAPPA_ * DJij
+    
+    return Jij
+        
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_DJij(DJij, rates, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
+
+    # KAPPA_DT_TAU = KAPPA * DT_TAU
+    
+    # norm = ALPHA * DJij * rates**2 
+    # norm = ALPHA * DJij * rates
+    # DJij = DJij + DT_TAU * ( KAPPA * np.outer(rates, rates) - norm)
+
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + DT_TAU * KAPPA * np.outer(rates, rates)
+    
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + DT_TAU * ( KAPPA * np.outer(rates, rates) )
+    
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + KAPPA_DT_TAU * np.outer(rates, rates) 
+    
+    DJij = DJij * EXP_DT_TAU 
+    norm = np.sum(rates**2)
+    DJij = DJij + KAPPA * DT_TAU * np.outer(rates, rates) / norm
+    
+    # theta = np.linspace(0.0, 2.0 * np.pi, DJij.shape[0])
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + KAPPA_DT_TAU * np.cos(theta_mat(theta, theta))
+    
+    # norm = np.sum(rates**2)
+    # DJij = KAPPA_DT_TAU * np.outer(rates, rates) / norm
+    
+    # print(np.mean(DJij))        
     # print(np.mean(DJij), np.mean(KAPPA_DT_TAU * np.outer(rates, rates)))
     
     return DJij
@@ -108,8 +169,12 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
     
     if "all" in STRUCTURE:
         print('with all to all cosine structure')
-        # Pij[:, :] = Pij[:, :] * np.float32(SIGMA) 
-        # Cij[:, :] = (Pij[:, :] + 1.0)
+        # itskov hansel
+        if "cos" in STRUCTURE:
+            Pij[:, :] = Pij[:, :] * np.float32(KAPPA) 
+            Cij[:, :] = (Pij[:, :] + 1.0) / np.float32(Nb) + 0.5 * numba_normal((Nb,Nb)) / np.sqrt(Nb) * np.float32(KAPPA)
+        else:
+            Cij[:, :] = np.identity(Nb)
         
         # Cij[:, :] = Cij[:, :] * (Cij>=0)
         
@@ -120,7 +185,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         # Z = Nb / np.sum(Cij, axis=1)
         # Cij[:, :] = Cij[:, :] * Z
         
-        Cij[:, :] = von_mises(theta_ij, np.float64(KAPPA))
+        # Cij[:, :] = von_mises(theta_ij, np.float64(KAPPA))
 
     elif STRUCTURE == "gauss":
         print('with strong gauss proba') 
@@ -156,10 +221,11 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < KAPPA * np.sqrt(Kb) /Nb)
 
-    elif "spec_cos_rand" in STRUCTURE:
-        print("with random cos spec")
+    elif "spec_cos_weak" in STRUCTURE:
+        print("with weak cos spec")
         Pij[:, :] = np.sqrt(Kb) * Pij[:, :] + 1.0
-        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
+        Cij[:, :] = SIGMA * (np.random.rand(Na, Nb) < (np.sqrt(Kb) / Nb) * Pij )
+        # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
         
     else:        
         Pij[:, :] = Pij[:, :] + 1.0
