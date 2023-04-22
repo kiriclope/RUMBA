@@ -122,7 +122,13 @@ def hist_rates(df, window):
     sns.histplot(mean_df, x=mean_df.rates, kde=True)
     plt.xlabel('Rates (Hz)')
 
-
+def corr_rates(df):
+    mean_df = df.groupby('neurons').mean()
+    rates = mean_df.rates
+    rij = np.outer(rates, rates)
+    Cij = np.corrcoef(rij)
+    plt.plot(np.mean(Cij, 1))
+    
 def hist_inputs(df):
     df1 = df[df.time>.0]
     mean_df = df1.groupby('neurons').mean()
@@ -153,7 +159,7 @@ def heatmap(df, vmax=20):
     # yticks = np.linspace(0, len(df1.neurons), n_ticks)
     
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
-
+ 
     
 def spatial_profile(df, window=10):
     df1 = df[df.time < window[1]]

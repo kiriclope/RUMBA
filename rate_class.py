@@ -8,15 +8,10 @@ from pandas import DataFrame, HDFStore, concat
 from numba import jit, set_num_threads
 
 from decode import decode_bump
-from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij, numba_multiple_maps
+from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij, numba_multiple_maps, numba_update_local_field, theta_mat, moving_average
 from mean_field_spec import get_mf_spec, m0_func
 from stp_utils import STP_Model, numba_markram_stp
 
-
-def update_DJij(DJij, rates, EXP_DT_TAU, KAPPA_DT_TAU): 
-    DJij = np.where(DJij>0, DJij * EXP_DT_TAU, 0) 
-    DJij = DJij + KAPPA_DT_TAU * np.outer(rates, rates)
-    return DJij
 
 class Bunch(object):
   def __init__(self, adict):
@@ -295,14 +290,17 @@ class Network:
 
         # LEARNING
         self.IF_LEARNING = const.IF_LEARNING
-        self.TAU_LEARN = 1.0
+        self.TAU_LEARN = 1000.0
         self.DT_TAU_LEARN = self.DT / self.TAU_LEARN 
         
         # self.KAPPA_LEARN = 1.0
-        self.KAPPA_LEARN = np.float32(self.KAPPA[0][0] / np.sqrt(self.Ka[0]))
+        # self.KAPPA_LEARN = self.KAPPA[0][0]
+        self.KAPPA_LEARN = self.KAPPA[0][0] / np.sqrt(self.Ka[0]) 
+        self.KAPPA_DT_TAU_LEARN = self.KAPPA_LEARN * self.DT_TAU_LEARN
         self.EXP_DT_TAU_LEARN = np.exp(-self.DT / self.TAU_LEARN, dtype=np.float32)
         
-        self.ALPHA = self.Ka[0]
+        # self.ALPHA = 1.0
+        self.ALPHA = np.sqrt(self.Ka[0])
         self.ETA_DT = self.DT / self.TAU_SYN[0]
         
         self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
@@ -455,6 +453,9 @@ class Network:
         if self.IF_LEARNING:
             DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float32)
             Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
+            # theta = np.linspace(0.0, 2.0 * np.pi, self.Na[0])
+            # cos_mat_learn = self.KAPPA_LEARN * np.cos(theta_mat(theta, theta))
+            
             # N_MAPS = 10
             # Jij = numba_multiple_maps(self.Ka[0], self.Na[0], self.KAPPA[0][0], N_MAPS)
             # Cij[:self.Na[0],:self.Na[0]] = Cij[:self.Na[0],:self.Na[0]] * (1.0 + Jij)
@@ -463,6 +464,8 @@ class Network:
 
         running_step = 0
         data = []
+
+        mean_rates = self.rates
         
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
@@ -484,14 +487,23 @@ class Network:
                 
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
+
+            if step <= self.N_STEADY:
+                mean_rates = mean_rates + self.rates 
             
-            if self.IF_LEARNING:
-                # Cij = self.update_Cij(Dij)                
-                # DJij = numba_update_Cij(DJij, self.rates[:self.Na[0]], ALPHA=self.ALPHA, ETA_DT=self.ETA_DT)
-            
-                if step >= self.N_STIM_ON and step < self.N_STIM_OFF:
-                    DJij = numba_update_DJij(DJij, self.rates[:self.Na[0]], self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA)
-                    Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
+            if self.IF_LEARNING and step >= self.N_STEADY:
+                
+                rates_E = self.rates[:self.Na[0]].copy()
+                # smooth = moving_average(rates_E, int(np.sqrt(self.K))) - np.mean(rates_E)
+                smooth = moving_average(rates_E - mean_rates[:self.Na[0]] / self.N_STEADY, int(np.sqrt(self.K)))
+                # print(smooth)
+                
+                DJij = numba_update_local_field(DJij, smooth, self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA) 
+                Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
+                
+                # if step == self.N_STIM_ON:
+                #     DJij = DJij + cos_mat_learn
+                #     Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
                 
             if self.THRESH_DYN==0:
                 self.update_thresh()

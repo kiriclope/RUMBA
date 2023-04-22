@@ -1,7 +1,39 @@
 import numpy as np
 from numba import jit, njit
 from scipy.special import i0
+from scipy.ndimage import convolve
 
+# @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def moving_average(x, w=3) :
+    return convolve(x, np.ones(w), mode='reflect') / w
+
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_local_field(DJij, smooth, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
+    
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + KAPPA_DT_TAU * (np.outer(smooth, smooth) - norm)
+
+    # DJij = DJij * EXP_DT_TAU 
+    # DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth)
+
+    DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth)
+    
+    # norm = ALPHA * DJij * smooth**2 
+    # DJij = KAPPA * DT_TAU * ( np.outer(smooth, smooth) - norm)
+    
+    # norm = ALPHA * DJij * smooth**2 
+    # DJij = DJij + DT_TAU * ( KAPPA * np.outer(smooth, smooth) - norm) 
+    
+    return DJij 
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
+    
+    DJij = DJij * EXP_DT_TAU 
+    DJij = DJij + cos_mat
+
+    return DJij
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_normal(size):

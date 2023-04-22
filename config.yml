@@ -2,14 +2,14 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 150.0
+DURATION: 250.0
 
-T_STEADY: 10.0
+T_STEADY: 50.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 50.0
-T_STIM_OFF: 75.0
-I0: [0.15, 0.]
+T_STIM_ON: 100.0
+T_STIM_OFF: 150.0
+I0: [0.25, 0.]
 PHI0: None
 SIGMA_EXT: 1.0
 PERT_TYPE: 'cos'
@@ -19,8 +19,8 @@ TF_NAME: TL
 TF_GAIN: 1
 
 N_POP: 2
-N: 10000
-K: 500
+N: 5000
+K: 250
 frac: [.5, .5]
 
 SYN_DYN: 0
@@ -56,7 +56,7 @@ IF_STP: 0
 SEED: 10
 STRUCTURE: ['None', 'None', 'None', 'None']
 SIGMA: [0.0, 2.5, 0.5, 2.5]
-KAPPA: [60.0, 0.5, 3.5, 0.5]
+KAPPA: [1.0, 0.5, 3.5, 0.5]
 
 TOLERANCE: 1.e-12
 MAXITER: 100
