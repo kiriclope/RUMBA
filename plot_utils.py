@@ -161,7 +161,7 @@ def heatmap(df, vmax=20):
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
  
     
-def spatial_profile(df, window=10):
+def spatial_profile(df, window=10, n=250):
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
     
@@ -170,7 +170,7 @@ def spatial_profile(df, window=10):
     
     m1, phase = decode_bump(array)
     
-    smooth = circcvl(array[:, 0], windowSize=250)
+    smooth = circcvl(array[:, 0], windowSize=n)
     print(smooth.shape)
     smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0])) 
 
@@ -191,7 +191,7 @@ def animate(frame, frames, line):
     line.set_ydata(frames[frame])
     
     
-def animated_bump(df, window=250):
+def animated_bump(df, window=15, interval=10):
 
     frames = []
     n_frames = len(df.time.unique())
@@ -207,7 +207,7 @@ def animated_bump(df, window=250):
     anim = FuncAnimation(fig,
         lambda i: animate(i, frames, line),
         frames=n_frames,
-        interval=200,
+        interval=interval,
         repeat=True,
         cache_frame_data=False)
     

@@ -17,13 +17,15 @@ def numba_update_local_field(DJij, smooth, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
     # DJij = DJij * EXP_DT_TAU 
     # DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth)
 
-    DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth)
+    # norm = np.sqrt(smooth)
+    # DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth) 
+    # DJij = DJij + KAPPA * DT_TAU * np.outer(smooth, smooth)
     
     # norm = ALPHA * DJij * smooth**2 
     # DJij = KAPPA * DT_TAU * ( np.outer(smooth, smooth) - norm)
     
-    # norm = ALPHA * DJij * smooth**2 
-    # DJij = DJij + DT_TAU * ( KAPPA * np.outer(smooth, smooth) - norm) 
+    norm = ALPHA * DJij * smooth**2
+    DJij = DJij + DT_TAU * ( KAPPA * np.outer(smooth, smooth) - norm) 
     
     return DJij 
 
