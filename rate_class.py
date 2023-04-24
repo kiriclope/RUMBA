@@ -40,6 +40,8 @@ def nd_numpy_to_nested(X):
 
     if X.shape[-1] == 5:
         variables = ['rates', 'ff', 'h_E', 'h_I']
+    elif X.shape[-1]==4:
+        variables = ['rates', 'ff', 'h']
     else:
         variables = ['rates', 'ff', 'h_E1', 'h_E2', 'h_I']
 
@@ -54,18 +56,6 @@ def nd_numpy_to_nested(X):
         df = concat((df, df_i))
 
     print(df)
-
-    return df
-
-
-def create_df(data):
-    print(data.shape)
-    df = DataFrame(data.T,
-        columns=['time','neurons', 'rates', 'ff', 'h_E', 'h_I'])
-
-    df = DataFrame(['time','neurons', 'rates', 'ff', 'h_E', 'h_I'])
-    # df = df.round(2)
-    df = df.astype({"neurons": int})
 
     return df
 
@@ -277,7 +267,11 @@ class Network:
         self.I0 = np.array(const.I0, dtype=np.float32)
         self.I0 *= self.M0 * np.sqrt(self.Ka[0])
 
-        self.PHI0 = np.random.uniform(2*np.pi)
+        if const.PHI0 == 'None':
+            self.PHI0 = np.random.uniform(2*np.pi)
+        else:
+            self.PHI0 = const.PHI0 * np.pi / 180.
+            
         self.SIGMA_EXT = const.SIGMA_EXT
 
         self.SEED = const.SEED
@@ -290,7 +284,7 @@ class Network:
 
         # LEARNING
         self.IF_LEARNING = const.IF_LEARNING
-        self.TAU_LEARN = 5000.0
+        self.TAU_LEARN = 250.0
         self.DT_TAU_LEARN = self.DT / self.TAU_LEARN 
         
         # self.KAPPA_LEARN = 1.0
@@ -321,21 +315,21 @@ class Network:
         
         ## initial conditions from self consistent eqs
         u0, u1, alpha = get_mf_spec("config")
-        for i_pop in range(self.N_POP):
-            if i_pop==0:
-                self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[i_pop] + np.sqrt(alpha[i_pop])
-                                                                    * rng.standard_normal(self.Na[i_pop], dtype=np.float32))
-            if i_pop==1:
-                self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[0] + np.sqrt(alpha[0])
-                                                                        * rng.standard_normal(self.Na[1], dtype=np.float32))
+        # for i_pop in range(self.N_POP):
+        #     if i_pop==0:
+        #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[i_pop] + np.sqrt(alpha[i_pop])
+        #                                                             * rng.standard_normal(self.Na[i_pop], dtype=np.float32))
+        #     if i_pop==1:
+        #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[0] + np.sqrt(alpha[0])
+        #                                                                 * rng.standard_normal(self.Na[1], dtype=np.float32))
 
-            if i_pop==2:
-                self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[1] + np.sqrt(alpha[1])
-                                                                        * rng.standard_normal(self.Na[2], dtype=np.float32))
+        #     if i_pop==2:
+        #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[1] + np.sqrt(alpha[1])
+        #                                                                 * rng.standard_normal(self.Na[2], dtype=np.float32))
 
-        print(self.rates[:5])
+        # print(self.rates[:5])
         self.mf_rates = m0_func(u0, u1, alpha)
-
+        
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
         self.thresh = np.ones( (self.N,), dtype=np.float32)
@@ -395,6 +389,15 @@ class Network:
             self.ff_inputs = self.ff_inputs_0
 
     def perturb_inputs(self, step):
+        
+        if step<self.N_STIM_ON:
+            for i_pop in range(self.N_POP):
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = - self.Iext[i_pop]
+        if step>self.N_STIM_OFF:
+            for i_pop in range(self.N_POP):
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop]
+            
+            
         if step == self.N_STIM_ON:
             print('CUE ON')
             for i_pop in range(self.N_POP):
@@ -437,10 +440,9 @@ class Network:
     
     def run(self):
         NE = self.Na[0]
-        Cij = np.ascontiguousarray(self.generate_Cij())
-        
+        Cij = self.generate_Cij()        
         # Cij = csc_matrix(Cij, dtype=np.float32)
-
+        
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
@@ -465,7 +467,7 @@ class Network:
         running_step = 0
         data = []
 
-        mean_rates = self.rates
+        self.mean_rates = self.rates
         
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
@@ -484,20 +486,20 @@ class Network:
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
-                
+            
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
 
             if step < self.N_STEADY:
-                mean_rates = mean_rates + self.rates 
+                self.mean_rates = self.mean_rates + self.rates 
             if step == self.N_STEADY:
-                mean_rates = mean_rates / self.N_STEADY
+                self.mean_rates = self.mean_rates / self.N_STEADY
                 
             if self.IF_LEARNING and step >= self.N_STEADY:
                 
                 rates_E = self.rates[:self.Na[0]].copy()
                 # smooth = moving_average(rates_E, int(np.sqrt(self.K))) - np.mean(rates_E)
-                smooth = moving_average(rates_E - mean_rates[:self.Na[0]], int(np.sqrt(self.K)))
+                smooth = moving_average(rates_E - self.mean_rates[:self.Na[0]], int(self.K))
                 # print(smooth) 
                 
                 DJij = numba_update_local_field(DJij, smooth, self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA) 
@@ -521,18 +523,23 @@ class Network:
 
                     data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
 
-                    print('time (ms)', np.round(step/self.N_STEPS, 2),
-                          'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
-                          np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
-                          np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
-
+                    try:
+                        print('time (ms)', np.round(step/self.N_STEPS, 2),
+                            'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
+                            np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
+                            np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
+                    except:
+                        print('time (ms)', np.round(step/self.N_STEPS, 2),
+                              'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
+                        
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
                     phases.append(phase)
-
-                    m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
-                    amplitudes.append(m1)
-                    phases.append(phase)
+                    
+                    if self.N_POP>1:
+                        m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
+                        amplitudes.append(m1)
+                        phases.append(phase)
 
                     if self.N_POP>2:
                         m1, phase = decode_bump(self.rates[self.csumNa[2]:])
@@ -559,12 +566,34 @@ class Network:
 
 if __name__ == "__main__":
 
-    # set_num_threads(50)
-    config = safe_load(open("./config.yml", "r"))
-    model = Network(**config)
+    # # set_num_threads(50)    
+    # config = safe_load(open("./config_bump.yml", "r"))
+    # model = Network(**config)
 
+    # start = perf_counter()
+    # model.run()
+    # end = perf_counter()
+
+    # print("Elapsed (with compilation) = {}s".format((end - start)))
+
+        
+    config = safe_load(open("./config_bump.yml", "r"))
+    
     start = perf_counter()
-    model.run()
+    name = config['FILE_NAME']
+
+    for i_phase in range(10):
+        
+        config['PHI0'] = i_phase * 180.0 /10.0
+        
+        for i_simul in range(20):
+            
+            config['FILE_NAME'] = name + "_%d_%d" % (i_simul, i_phase)
+            model = Network(**config)
+            model.run()
+        
+
     end = perf_counter()
 
     print("Elapsed (with compilation) = {}s".format((end - start)))
+    

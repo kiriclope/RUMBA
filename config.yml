@@ -2,13 +2,13 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 1000.0
+DURATION: 5000.0
 
-T_STEADY: 250.0
+T_STEADY: 4250.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 500.0
-T_STIM_OFF: 750.0
+T_STIM_ON: 4500.0
+T_STIM_OFF: 4750.0
 I0: [0.25, 0.]
 PHI0: None
 SIGMA_EXT: 1.0
@@ -39,7 +39,7 @@ THRESH: [0.00, 0.00]
 RATE_DYN: 1
 TAU_MEM: [20.0, 10.0]
 
-GAIN: 1.0
+GAIN: 2.0
 Jab: [0.44, -0.28, 0.67, -0.34]
 # Jab: [1, -1.5, 1, -1]
 # Jab: [0.00133, -0.08, 0.02, -0.133]
@@ -48,7 +48,7 @@ Jab: [0.44, -0.28, 0.67, -0.34]
 Iext: [0.5, 0.25]
 # Iext: [1.9, 4.0]
 
-M0: 1.0
+M0: 5.0
 
 IF_LEARNING: 1
 IF_STP: 0
@@ -56,7 +56,7 @@ IF_STP: 0
 SEED: 10
 STRUCTURE: ['None', 'None', 'None', 'None']
 SIGMA: [0.0, 2.5, 0.5, 2.5]
-KAPPA: [1.0, 0.5, 3.5, 0.5]
+KAPPA: [1.5, 0.5, 3.5, 0.5]
 
 TOLERANCE: 1.e-12
 MAXITER: 100

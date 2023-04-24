@@ -35,18 +35,20 @@ def get_df(filename, configname='config.yml'):
     df = pd.read_hdf(filename + '.h5', mode='r')
     
     df_E = df[df.neurons<Na[0]]
-
+    df_EE = []
+    df_I = []
+    
     if const.N_POP==2:
         df_EE = df[df.neurons>=Na[0]]
         df_I = df[df.neurons>=Na[0]]
-    else:
+    elif const.N_POP==3:
         df_EE = df[df.neurons>=Na[0]]
-        df_EE = df_EE[df_EE.neurons<Na[0]+Na[1]]
-    
+        df_EE = df_EE[df_EE.neurons<Na[0]+Na[1]]    
         df_I = df[df.neurons>=Na[0]+Na[1]]
+    
+    # return df, df_E, df_EE, df_I
 
-    return df, df_E, df_EE, df_I
-
+    return df
 
 def plot_con(Cij):
 
@@ -173,7 +175,7 @@ def spatial_profile(df, window=10, n=250):
     smooth = circcvl(array[:, 0], windowSize=n)
     print(smooth.shape)
     smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0])) 
-
+    
     plt.plot(smooth)
     plt.xlabel('Neuron #')
     plt.ylabel('Rate (Hz)')
@@ -208,7 +210,7 @@ def animated_bump(df, window=15, interval=10):
         lambda i: animate(i, frames, line),
         frames=n_frames,
         interval=interval,
-        repeat=True,
+        repeat=False,
         cache_frame_data=False)
     
     plt.draw()
@@ -252,17 +254,29 @@ def line_phase(df):
     ax[2].set_xlabel('Time (ms)')
     ax[2].set_ylabel('Phase (°)')
 
-    # fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
+def line_phases(filename, config):
 
-    # ax[0].hist(array[-1])
-    # ax[0].set_xlabel('Population Rate (Hz)')
-    # ax[0].set_ylabel('Count')
+    name = filename
+    
+    for i_simul in range(25):
+        df = get_df(name + "_%d_1.0" % i_simul, config)
 
-    # ax[1].hist(m1)
-    # ax[1].set_xlabel('$\mathcal{F}^1$')
-    # ax[1].set_ylabel('Count')
+        times = df.time.unique()
+        n_times = len(times)
+        n_neurons = len(df.neurons.unique())
 
-    # ax[2].hist(phase)
-    # ax[2].set_xlabel('Phase')
-    # ax[2].set_ylabel('Count')
+        print(n_times, n_neurons)
+    
+        array = df.rates.to_numpy().reshape((n_times, n_neurons))
+    
+        print(array.shape)
+        m1, phase = decode_bump(array)
+        print(m1.shape, phase.shape)
+
+        phase = phase * 180.0 / np.pi - 180 
+        plt.plot(times, phase)
+        
+    plt.yticks([-180, -90, 0, 90, 180]) 
+    plt.xlabel('Time (a.u.)')
+    plt.ylabel('Phase (°)')
     
