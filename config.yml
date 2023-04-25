@@ -19,7 +19,7 @@ DT: 0.1
 # T_STIM_OFF: 4750.0
 
 I0: [0.1, 0.]
-PHI0: 180
+PHI0: None
 SIGMA_EXT: 1.0
 PERT_TYPE: 'cos'
 
@@ -48,7 +48,7 @@ THRESH: [0.00, 0.00]
 RATE_DYN: 1
 TAU_MEM: [5.0, 2.0]
 
-GAIN: 8.0
+GAIN: 1.0
 Jab: [0.44, -0.28, 0.67, -0.34]
 # Jab: [1, -1.5, 1, -1]
 # Jab: [0.00133, -0.08, 0.02, -0.133]
@@ -65,7 +65,7 @@ IF_STP: 0
 SEED: 10
 STRUCTURE: ['spec_cos', 'None', 'None', 'None']
 SIGMA: [0.0, 2.5, 0.5, 2.5]
-KAPPA: [7.5, 0.5, 3.5, 0.5]
+KAPPA: [2.75, 0.5, 3.5, 0.5]
 
 TOLERANCE: 1.e-12
 MAXITER: 100

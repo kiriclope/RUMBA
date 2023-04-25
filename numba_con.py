@@ -3,6 +3,31 @@ from numba import jit, njit
 from scipy.special import i0
 from scipy.ndimage import convolve
 
+@jit(nopython=True, parallel=False, fastmath=True, cache=True)
+def sillysort(arr):
+  # sort an array by swapping. asymptotically shitty. Should be replaced with
+  # mergesort at some point, if I can somehow get it to place nicely with
+  # numba's njit.
+  ndim = arr.shape[0]
+  for i in range(ndim):
+    for j in range(i,ndim):
+      if arr[i] > arr[j]:
+        tmp    = arr[i]
+        arr[i] = arr[j]
+        arr[j] = tmp
+
+@jit(nopython=True, parallel=False, fastmath=True, cache=True)
+def numba_sort(X, axis=0):
+    
+    if axis == 0:
+        for i in range(X.shape[1]):
+            sillysort(X[:,i])
+    elif axis == 1:
+        for i in range(X.shape[0]):
+            sillysort(X[i,:])
+            
+    # return _sort
+
 # @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def moving_average(x, w=3) :
     return convolve(x, np.ones(w), mode='reflect') / w
@@ -165,7 +190,7 @@ def strided_method(ar):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PHASE=0):
 
-    np.random.seed(2)
+    # np.random.seed(2)
 
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.float32)
@@ -202,8 +227,10 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
 
     elif "spec_cos" in STRUCTURE:
         print('with spec cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(KAPPA) / np.sqrt(Kb)
-
+        Pij[:, :] = Pij[:, :] * np.float32(KAPPA) * np.sqrt(Nb) / Kb
+        # if SIGMA>0.0:
+        #     Pij[:, :] =  Pij[:, :] + np.float32(SIGMA) * numba_normal((Nb,Nb)) / np.sqrt(Kb)        
+    
     elif "gauss" in STRUCTURE:
         Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
 
@@ -269,8 +296,16 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         Cij[:, :] = SIGMA * (np.random.rand(Na, Nb) < (np.sqrt(Kb) / Nb) * Pij )
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
 
+    elif "sort" in STRUCTURE: 
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) 
+        numba_sort(Cij[:, :], axis=1)
+        
+        Pij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb * Pij)
+        Cij[:, :] = Cij[:, :] + Pij[:,:]
+        
     else:
         Pij[:, :] = Pij[:, :] + 1.0
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
 
+        
     return Cij
