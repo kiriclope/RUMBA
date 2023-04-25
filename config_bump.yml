@@ -39,7 +39,7 @@ THRESH: [0.00]
 RATE_DYN: 1
 TAU_MEM: [1.0]
 
-GAIN: 1.0
+GAIN: 5.0
 Jab: [-10.0]
 Iext: [20.0]
 M0: 1.0
@@ -49,7 +49,7 @@ IF_STP: 0
 
 SEED: 10
 STRUCTURE: ['all_cos']
-SIGMA: [0.035]
+SIGMA: [0.0]
 KAPPA: [0.5]
 
 TOLERANCE: 1.e-12

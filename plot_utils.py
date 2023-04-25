@@ -22,33 +22,33 @@ class Bunch(object):
   def __init__(self, adict):
     self.__dict__.update(adict)
 
-    
+
 def get_df(filename, configname='config.yml'):
     config = safe_load(open(configname, "r"))
     const = Bunch(config)
-    
+
     Na = []
     for i_pop in range(const.N_POP):
         Na.append(int(const.N * const.frac[i_pop]))
 
     print(Na)
     df = pd.read_hdf(filename + '.h5', mode='r')
-    
+
     df_E = df[df.neurons<Na[0]]
     df_EE = []
     df_I = []
-    
+
     if const.N_POP==2:
-        df_EE = df[df.neurons>=Na[0]]
         df_I = df[df.neurons>=Na[0]]
+        return df, df_E, df_I
+
     elif const.N_POP==3:
         df_EE = df[df.neurons>=Na[0]]
-        df_EE = df_EE[df_EE.neurons<Na[0]+Na[1]]    
+        df_EE = df_EE[df_EE.neurons<Na[0]+Na[1]]
         df_I = df[df.neurons>=Na[0]+Na[1]]
-    
-    # return df, df_E, df_EE, df_I
-
-    return df
+        return df, df_E, df_EE, df_I
+    else:
+        return df
 
 def plot_con(Cij):
 
@@ -119,7 +119,7 @@ def hist_rates(df, window):
 
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
-    
+
     mean_df = df1.groupby('neurons').mean()
     sns.histplot(mean_df, x=mean_df.rates, kde=True)
     plt.xlabel('Rates (Hz)')
@@ -130,7 +130,7 @@ def corr_rates(df):
     rij = np.outer(rates, rates)
     Cij = np.corrcoef(rij)
     plt.plot(np.mean(Cij, 1))
-    
+
 def hist_inputs(df):
     df1 = df[df.time>.0]
     mean_df = df1.groupby('neurons').mean()
@@ -138,19 +138,19 @@ def hist_inputs(df):
 
     df_E = mean_df['ff'] + mean_df['h_E']
     sns.histplot(df_E, x=df_E, kde=True, color='r', ax=ax)
-    
+
     # sns.histplot(mean_df, x='h_E', kde=True, color='r', ax=ax)
     sns.histplot(mean_df, x='h_I', kde=True, color='b', ax=ax)
-    
-    df_net = mean_df['ff'] + mean_df['h_E'] + mean_df['h_I'] 
+
+    df_net = mean_df['ff'] + mean_df['h_E'] + mean_df['h_I']
     sns.histplot(df_net, x=df_net, kde=True, color='k', ax=ax)
-    
+
     plt.xlabel('Inputs')
 
 
 def heatmap(df, vmax=20):
     df1 = df[['time','neurons','rates']]
-    
+
     print(df1.head())
     pt = pd.pivot_table(df1, values ='rates',index=['neurons'],columns='time')
 
@@ -159,23 +159,23 @@ def heatmap(df, vmax=20):
     yticks = []
     # xticks = np.linspace(0, len(df1.time), n_ticks)
     # yticks = np.linspace(0, len(df1.neurons), n_ticks)
-    
+
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
- 
-    
+
+
 def spatial_profile(df, window=10, n=250):
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
-    
+
     mean_df = df1.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
-    
+
     m1, phase = decode_bump(array)
-    
+
     smooth = circcvl(array[:, 0], windowSize=n)
     print(smooth.shape)
-    smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0])) 
-    
+    smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0]))
+
     plt.plot(smooth)
     plt.xlabel('Neuron #')
     plt.ylabel('Rate (Hz)')
@@ -188,31 +188,31 @@ def init(frames, ax):
     ax.set_ylim([0, int(np.amax(frames)) + 1])
 
     return line
-    
+
 def animate(frame, frames, line):
     line.set_ydata(frames[frame])
-    
-    
+
+
 def animated_bump(df, window=15, interval=10):
 
     frames = []
     n_frames = len(df.time.unique())
     times = df.time.unique()
     for frame in range(n_frames):
-        df_i = df[df.time==times[frame]].rates.to_numpy()        
+        df_i = df[df.time==times[frame]].rates.to_numpy()
         smooth = circcvl(df_i, windowSize=window)
         frames.append(smooth)
-    
+
     fig, ax = plt.subplots()
     line = init(frames, ax)
-    
+
     anim = FuncAnimation(fig,
         lambda i: animate(i, frames, line),
         frames=n_frames,
         interval=interval,
         repeat=False,
         cache_frame_data=False)
-    
+
     plt.draw()
     # plt.show()
 
@@ -220,7 +220,7 @@ def animated_bump(df, window=15, interval=10):
     anim.save('bump.gif', writer=writergif, dpi=150)
 
     plt.close('all')
-    
+
 def line_phase(df):
 
     times = df.time.unique()
@@ -228,55 +228,57 @@ def line_phase(df):
     n_neurons = len(df.neurons.unique())
 
     print(n_times, n_neurons)
-    
+
     array = df.rates.to_numpy().reshape((n_times, n_neurons))
-    
+
     print(array.shape)
     m1, phase = decode_bump(array)
     print(m1.shape, phase.shape)
 
-    phase *= 180.0 / np.pi 
+    phase *= 180.0 / np.pi
     width=7
     fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
-    
+    plt.tight_layout()
+
     m0 = np.nanmean(array, -1)
-    
-    ax[0].plot(times, m0) 
+
+    ax[0].plot(times, m0)
     ax[0].set_xlabel('Time (ms)')
     ax[0].set_ylabel('Population Rate (Hz)')
-    
+
     ax[1].plot(times, m1)
     ax[1].set_xlabel('Time (ms)')
     ax[1].set_ylabel('$\mathcal{F}^1$')
 
     ax[2].plot(times, phase)
-    ax[2].set_yticks([-180, -90, 0, 90, 180])    
+    ax[2].set_yticks([-180, -90, 0, 90, 180])
     ax[2].set_xlabel('Time (ms)')
     ax[2].set_ylabel('Phase (°)')
 
 def line_phases(filename, config):
 
     name = filename
-    
-    for i_simul in range(25):
-        df = get_df(name + "_%d_1.0" % i_simul, config)
 
-        times = df.time.unique()
-        n_times = len(times)
-        n_neurons = len(df.neurons.unique())
+    for i_phase in range(10):
+       for i_simul in range(20):
 
-        print(n_times, n_neurons)
-    
-        array = df.rates.to_numpy().reshape((n_times, n_neurons))
-    
-        print(array.shape)
-        m1, phase = decode_bump(array)
-        print(m1.shape, phase.shape)
+          df = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config)
 
-        phase = phase * 180.0 / np.pi - 180 
-        plt.plot(times, phase)
-        
-    plt.yticks([-180, -90, 0, 90, 180]) 
+          times = df.time.unique()
+          n_times = len(times)
+          n_neurons = len(df.neurons.unique())
+
+          print(n_times, n_neurons)
+
+          array = df.rates.to_numpy().reshape((n_times, n_neurons))
+
+          print(array.shape)
+          m1, phase = decode_bump(array)
+          print(m1.shape, phase.shape)
+
+          phase = phase * 180.0 / np.pi - 180
+          plt.plot(times, phase)
+
+    plt.yticks([-180, -90, 0, 90, 180])
     plt.xlabel('Time (a.u.)')
     plt.ylabel('Phase (°)')
-    

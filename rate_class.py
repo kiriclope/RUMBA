@@ -25,7 +25,7 @@ def pertur_func(theta, I0, SIGMA0, PHI0, TYPE='cos'):
     else:
         return I0 * gaussian(theta - PHI0, SIGMA0)
 
-    
+
 def nd_numpy_to_nested(X):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
     into pandas DataFrame (with time series as pandas Series in cells)
@@ -67,7 +67,7 @@ def TF(x, thresh=None, tfname='TL', tfgain=1):
     #     return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
     # else:
     # return np.where(x > 0, x, 0)
-    
+
     return x * (x > 0)
     # if tfname=='Sig':
     #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
@@ -83,10 +83,10 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] = np.random.normal(0, VAR_FF[0], ff_inputs.shape[0]) + ff_inputs_0        
+        ff_inputs[:] = np.random.normal(0, VAR_FF[0], ff_inputs.shape[0]) + ff_inputs_0
     else:
         ff_inputs = ff_inputs_0
-    
+
     return ff_inputs
 
 
@@ -108,7 +108,7 @@ def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME, csumNa, EXP_DT_TAU_MEM, DT_TAU_MEM, RATE_DYN=0):
-    
+
     net_inputs = ff_inputs
 
     for i_pop in range(inputs.shape[0]):
@@ -117,7 +117,7 @@ def numba_update_rates(rates, inputs, ff_inputs, thresh, TF_NAME, csumNa, EXP_DT
     # if IF_NMDA:
     #     for i_pop in range(inputs.shape[0]):
     #         net_inputs = net_inputs + inputs_NMDA[i_pop]
-    
+
     if RATE_DYN == 0:
         rates = TF(net_inputs, thresh, TF_NAME, 1)
     else:
@@ -168,7 +168,7 @@ class Network:
         self.TAU_FF = const.TAU_FF
 
         self.VAR_FF = np.array(const.VAR_FF, dtype=np.float32)
-        
+
         self.TAU_MEM = const.TAU_MEM
 
         self.Na = []
@@ -178,7 +178,7 @@ class Network:
         self.DT_TAU_SYN = []
 
         self.IF_STP = const.IF_STP
-        
+
         self.IF_NMDA = const.IF_NMDA
         if self.IF_NMDA:
             self.TAU_NMDA = const.TAU_NMDA
@@ -255,10 +255,10 @@ class Network:
         if self.SYN_DYN:
             for i_pop in range(self.N_POP):
                 self.Jab[:, i_pop] = self.Jab[:, i_pop] * self.DT_TAU_SYN[i_pop] / np.sqrt(self.Ka[i_pop])
-        else:            
+        else:
             for i_pop in range(self.N_POP):
                 self.Jab[:, i_pop] = self.Jab[:, i_pop] / np.sqrt(self.Ka[i_pop])
-        
+
         self.Jab[np.isinf(self.Jab)] = 0
 
         self.Iext *= np.sqrt(self.Ka[0]) * self.M0
@@ -271,7 +271,7 @@ class Network:
             self.PHI0 = np.random.uniform(2*np.pi)
         else:
             self.PHI0 = const.PHI0 * np.pi / 180.
-            
+
         self.SIGMA_EXT = const.SIGMA_EXT
 
         self.SEED = const.SEED
@@ -285,20 +285,20 @@ class Network:
         # LEARNING
         self.IF_LEARNING = const.IF_LEARNING
         self.TAU_LEARN = 250.0
-        self.DT_TAU_LEARN = self.DT / self.TAU_LEARN 
-        
+        self.DT_TAU_LEARN = self.DT / self.TAU_LEARN
+
         # self.KAPPA_LEARN = 1.0
-        self.KAPPA_LEARN = self.KAPPA[0][0] / np.sqrt(self.Ka[0]) 
+        self.KAPPA_LEARN = self.KAPPA[0][0] / np.sqrt(self.Ka[0])
         self.KAPPA_DT_TAU_LEARN = self.KAPPA_LEARN * self.DT_TAU_LEARN
         self.EXP_DT_TAU_LEARN = np.exp(-self.DT / self.TAU_LEARN, dtype=np.float32)
-        
+
         self.ALPHA = 1.0
         # self.ALPHA = np.sqrt(self.Ka[0])
         self.ETA_DT = self.DT / self.TAU_SYN[0]
-        
+
         self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
         self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float32)
-        
+
         if self.IF_NMDA:
             self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
 
@@ -312,9 +312,9 @@ class Network:
         #     self.inputs[i_pop] = rng.normal(10, 10/4.0, self.N)
 
         # self.inputs[-1] = (-1.0) * self.inputs[-1]
-        
+
         ## initial conditions from self consistent eqs
-        u0, u1, alpha = get_mf_spec("config")
+        # u0, u1, alpha = get_mf_spec("config")
         # for i_pop in range(self.N_POP):
         #     if i_pop==0:
         #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[i_pop] + np.sqrt(alpha[i_pop])
@@ -328,8 +328,8 @@ class Network:
         #                                                                 * rng.standard_normal(self.Na[2], dtype=np.float32))
 
         # print(self.rates[:5])
-        self.mf_rates = m0_func(u0, u1, alpha)
-        
+        # self.mf_rates = m0_func(u0, u1, alpha)
+
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
         self.thresh = np.ones( (self.N,), dtype=np.float32)
@@ -389,15 +389,16 @@ class Network:
             self.ff_inputs = self.ff_inputs_0
 
     def perturb_inputs(self, step):
-        
+
         if step<self.N_STIM_ON:
-            for i_pop in range(self.N_POP):
-                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = - self.Iext[i_pop]
-        if step>self.N_STIM_OFF:
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
+            # for i_pop in range(self.N_POP):
+            #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = - self.Iext[i_pop]
+        if step==self.N_STIM_ON:
             for i_pop in range(self.N_POP):
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop]
-            
-            
+
+
         if step == self.N_STIM_ON:
             print('CUE ON')
             for i_pop in range(self.N_POP):
@@ -421,7 +422,7 @@ class Network:
 
         return Cij
 
-    
+
     def generate_Cij_NMDA(self, Cij):
         Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float32)
 
@@ -437,12 +438,12 @@ class Network:
         Cab = Cab * self.DT_TAU_SYN[0]
         Cij[self.csumNa[0]:self.csumNa[1], self.csumNa[0]:self.csumNa[1]] = Cab
         return Cij
-    
+
     def run(self):
         NE = self.Na[0]
-        Cij = self.generate_Cij()        
+        Cij = self.generate_Cij()
         # Cij = csc_matrix(Cij, dtype=np.float32)
-        
+
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
@@ -450,65 +451,65 @@ class Network:
             Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
             Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
             stp = STP_Model(self.Na[0], self.DT)
-            
+
         if self.IF_LEARNING:
             DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float32)
             Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
 
             # theta = np.linspace(0.0, 2.0 * np.pi, self.Na[0])
             # cos_mat_learn = self.KAPPA_LEARN * np.cos(theta_mat(theta, theta))
-            
+
             # N_MAPS = 10
             # Jij = numba_multiple_maps(self.Ka[0], self.Na[0], self.KAPPA[0][0], N_MAPS)
             # Cij[:self.Na[0],:self.Na[0]] = Cij[:self.Na[0],:self.Na[0]] * (1.0 + Jij)
-            
+
         self.print_params()
 
         running_step = 0
         data = []
 
         self.mean_rates = self.rates
-        
+
         for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
-            
+
             # self.update_ff_inputs()
             self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF, self.VAR_FF, self.FF_DYN)
 
             if self.IF_STP:
-                stp.markram_stp(self.rates[:self.Na[0]]) 
+                stp.markram_stp(self.rates[:self.Na[0]])
                 # stp.hansel_stp(self.rates[:self.Na[0]])
                 # print(self.Jab[0][0], np.mean(stp.A_u_x_stp))
                 Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
-            
+
             # self.update_inputs(Cij)
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.Na, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
-            
+
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN)
 
             if step < self.N_STEADY:
-                self.mean_rates = self.mean_rates + self.rates 
+                self.mean_rates = self.mean_rates + self.rates
             if step == self.N_STEADY:
                 self.mean_rates = self.mean_rates / self.N_STEADY
-                
+
             if self.IF_LEARNING and step >= self.N_STEADY:
-                
+
                 rates_E = self.rates[:self.Na[0]].copy()
                 # smooth = moving_average(rates_E, int(np.sqrt(self.K))) - np.mean(rates_E)
                 smooth = moving_average(rates_E - self.mean_rates[:self.Na[0]], int(self.K))
-                # print(smooth) 
-                
-                DJij = numba_update_local_field(DJij, smooth, self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA) 
+                # print(smooth)
+
+                DJij = numba_update_local_field(DJij, smooth, self.EXP_DT_TAU_LEARN, self.KAPPA_LEARN, self.DT_TAU_LEARN, self.ALPHA)
                 Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
-                
+
                 # if step == self.N_STIM_ON:
                 #     DJij = DJij + cos_mat_learn
                 #     Cij[:self.Na[0],:self.Na[0]] = Cij_fix * (1.0 + DJij)
-                
+
             if self.THRESH_DYN==0:
                 self.update_thresh()
 
@@ -531,11 +532,11 @@ class Network:
                     except:
                         print('time (ms)', np.round(step/self.N_STEPS, 2),
                               'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
-                        
+
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
                     phases.append(phase)
-                    
+
                     if self.N_POP>1:
                         m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
                         amplitudes.append(m1)
@@ -566,34 +567,32 @@ class Network:
 
 if __name__ == "__main__":
 
-    # # set_num_threads(50)    
-    # config = safe_load(open("./config_bump.yml", "r"))
-    # model = Network(**config)
+    # # set_num_threads(50)
+    config = safe_load(open("./config.yml", "r"))
+    model = Network(**config)
 
-    # start = perf_counter()
-    # model.run()
-    # end = perf_counter()
-
-    # print("Elapsed (with compilation) = {}s".format((end - start)))
-
-        
-    config = safe_load(open("./config_bump.yml", "r"))
-    
     start = perf_counter()
-    name = config['FILE_NAME']
-
-    for i_phase in range(10):
-        
-        config['PHI0'] = i_phase * 180.0 /10.0
-        
-        for i_simul in range(20):
-            
-            config['FILE_NAME'] = name + "_%d_%d" % (i_simul, i_phase)
-            model = Network(**config)
-            model.run()
-        
-
+    model.run()
     end = perf_counter()
 
     print("Elapsed (with compilation) = {}s".format((end - start)))
-    
+
+    # config = safe_load(open("./config_bump.yml", "r"))
+
+    # start = perf_counter()
+    # name = config['FILE_NAME']
+
+    # for i_phase in range(10):
+
+    #     config['PHI0'] = i_phase * 360.0 /10.0
+
+    #     for i_simul in range(20):
+
+    #         config['FILE_NAME'] = name + "_%d_%d" % (i_simul, i_phase)
+    #         model = Network(**config)
+    #         model.run()
+
+
+    # end = perf_counter()
+
+    # print("Elapsed (with compilation) = {}s".format((end - start)))
