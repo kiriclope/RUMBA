@@ -48,7 +48,7 @@ def get_df(filename, configname='config.yml'):
         df_I = df[df.neurons>=Na[0]+Na[1]]
         return df, df_E, df_EE, df_I
     else:
-        return df
+        return df, df_E, df_I
 
 def plot_con(Cij):
 
@@ -235,7 +235,8 @@ def line_phase(df):
     m1, phase = decode_bump(array)
     print(m1.shape, phase.shape)
 
-    phase *= 180.0 / np.pi
+    phase = phase * 180.0 / np.pi - 180.0
+    
     width=7
     fig, ax = plt.subplots(1, 3, figsize=[3*width, width * golden_ratio])
     plt.tight_layout()
@@ -259,25 +260,20 @@ def line_phases(filename, config):
 
     name = filename
 
-    for i_phase in range(10):
-       for i_simul in range(20):
+    for i_phase in range(0,1):
+       for i_simul in range(10):
 
-          df = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config)
+          df, df_E, df_I = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config + '.yml')
 
-          times = df.time.unique()
+          times = df_E.time.unique()
           n_times = len(times)
-          n_neurons = len(df.neurons.unique())
-
-          print(n_times, n_neurons)
-
-          array = df.rates.to_numpy().reshape((n_times, n_neurons))
-
-          print(array.shape)
+          n_neurons = len(df_E.neurons.unique())
+          
+          array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
           m1, phase = decode_bump(array)
-          print(m1.shape, phase.shape)
 
-          phase = phase * 180.0 / np.pi - 180
-          plt.plot(times, phase)
+          phase = phase * 180.0 / np.pi - 180.0
+          plt.plot(times, phase, alpha=.25)
 
     plt.yticks([-180, -90, 0, 90, 180])
     plt.xlabel('Time (a.u.)')

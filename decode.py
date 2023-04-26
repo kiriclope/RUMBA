@@ -13,7 +13,7 @@ def decode_bump(signal, axis=-1):
     if axis != 1 and signal.ndim != 1:
         dft = np.swapaxes(dft, axis, -1)
 
-    m1 = 2 * np.absolute(dft) / length
+    m1 = 2.0 * np.absolute(dft) / length
     phi = np.arctan2(dft.imag, dft.real) % (2.0 * np.pi)
 
     return m1, phi
@@ -27,7 +27,8 @@ def circcvl(signal, windowSize=10, axis=-1):
 
     ker = np.concatenate(
         (np.ones((windowSize,)), np.zeros((signal_copy.shape[-1] - windowSize,)))
-    )
+        )
+    
     smooth_signal = np.real(
         np.fft.ifft(
             np.fft.fft(signal_copy, axis=-1) * np.fft.fft(ker, axis=-1), axis=-1

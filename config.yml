@@ -1,13 +1,13 @@
 verbose: 0
 SAVE: 1
 
-DURATION: 2500.0
+DURATION: 2000.0
 
-T_STEADY: 1000.0
+T_STEADY: 250.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 1250.0
-T_STIM_OFF: 1500.0
+T_STIM_ON: 500.0
+T_STIM_OFF: 1000.0
 
 DT: 0.1
 # DURATION: 20.0
@@ -18,34 +18,36 @@ DT: 0.1
 # T_STIM_ON: 4500.0
 # T_STIM_OFF: 4750.0
 
-I0: [0.1, 0.]
-PHI0: None
-SIGMA_EXT: 1.0
+I0: [0.2, 0.]
+PHI0: 180
+SIGMA0: 1.0
+
+SIGMA_EXT: 10.0
 PERT_TYPE: 'cos'
 
-FILE_NAME: chaos
+FILE_NAME: chaos2
 TF_NAME: TL
 TF_GAIN: 1
 
 N_POP: 2
 N: 10000
-K: 500
+K: 700
 frac: [.5, .5]
 
-SYN_DYN: 0
+SYN_DYN: 1
 TAU_SYN: [4., 2.]
 
 IF_NMDA: 0
 TAU_NMDA: [20., 20.]
 
-FF_DYN: 2
+FF_DYN: 0
 TAU_FF: [4., 4.]
 VAR_FF: [10., 4.]
 
 THRESH_DYN: 0
 THRESH: [0.00, 0.00]
 
-RATE_DYN: 1
+RATE_DYN: 0
 TAU_MEM: [5.0, 2.0]
 
 GAIN: 1.0
@@ -65,7 +67,8 @@ IF_STP: 0
 SEED: 10
 STRUCTURE: ['spec_cos', 'None', 'None', 'None']
 SIGMA: [0.0, 2.5, 0.5, 2.5]
-KAPPA: [2.75, 0.5, 3.5, 0.5]
+KAPPA: [2.0, 0.5, 3.5, 0.5]
+PHASE: 0 
 
 TOLERANCE: 1.e-12
 MAXITER: 100

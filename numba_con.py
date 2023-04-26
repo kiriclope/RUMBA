@@ -63,7 +63,9 @@ def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
     return DJij
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_normal(size):
+def numba_normal(size, SEED=1):
+    np.random.seed(SEED)
+    
     res = np.zeros(size)
     for i in range(res.shape[0]):
         for j in range(res.shape[0]):
@@ -190,8 +192,8 @@ def strided_method(ar):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PHASE=0):
 
-    # np.random.seed(2)
-
+    np.random.seed(SEED)
+    
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.float32)
 
@@ -199,10 +201,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
     if STRUCTURE != 'None':
         theta = np.linspace(0.0, 2.0 * np.pi, Nb)
         phi = np.linspace(0.0, 2.0 * np.pi, Na)
-
-        # theta = np.linspace(-1.0 * np.pi, 1.0 * np.pi, Nb)
-        # phi = np.linspace(-1.0 * np.pi, 1.0 * np.pi, Na)
-
+        
         if 'perm' in STRUCTURE:
             print('permuted map')
             theta = np.random.permutation(theta) - np.pi
@@ -212,7 +211,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         phi = phi.astype(np.float32)
 
         theta_ij = theta_mat(theta, phi)
-        cos_ij = np.cos(theta_ij)
+        cos_ij = np.cos(theta_ij - PHASE)
 
         if 'lateral' in STRUCTURE:
             cos2_ij = np.cos(2.0 * theta_ij)
@@ -245,7 +244,9 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
             Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * np.float32(KAPPA)) / np.sqrt(Nb)
             if SIGMA>0.0:
                 Cij[:, :] =  Cij[:, :] + np.float32(SIGMA) * numba_normal((Nb,Nb)) / np.sqrt(Nb)
-
+        else:
+            Cij[:, :] = np.identity(Nb)
+            
         # Cij[:, :] = Cij[:, :] * (Cij>=0)
 
         # Z = Nb / np.sum(Cij, axis=1) / (2.0 * np.pi)

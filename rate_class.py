@@ -8,7 +8,7 @@ from pandas import DataFrame, HDFStore, concat
 from numba import jit, set_num_threads
 
 from decode import decode_bump
-from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij, numba_multiple_maps, numba_update_local_field, theta_mat, moving_average
+from numba_con import generate_Cab, numba_update_Cij, gaussian, numba_update_DJij, numba_multiple_maps, numba_update_local_field, theta_mat, moving_average, numba_normal
 from mean_field_spec import get_mf_spec, m0_func
 from stp_utils import STP_Model, numba_markram_stp
 
@@ -22,6 +22,8 @@ class Bunch(object):
 def pertur_func(theta, I0, SIGMA0, PHI0, TYPE='cos'):
     if TYPE=='cos':
         return I0 * (1.0 + SIGMA0 * np.cos(theta - PHI0) )
+    # elif TYPE=='cossin':
+    #     return  1.0 + SIGMA0 * ( numba_normal(theta.shape[0], 1) * np.cos(theta) + numba_normal(theta.shape[0], 10) * np.sin(theta) ) 
     else:
         return I0 * gaussian(theta - PHI0, SIGMA0)
 
@@ -83,7 +85,7 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] = np.random.normal(0, VAR_FF[0], ff_inputs.shape[0]) + ff_inputs_0
+        ff_inputs[:] = np.random.normal(0, np.sqrt(VAR_FF[0]), ff_inputs.shape[0]) + ff_inputs_0
     else:
         ff_inputs = ff_inputs_0
 
@@ -133,6 +135,8 @@ class Network:
 
         const = Bunch(kwargs)
 
+        self.PHASE = const.PHASE * np.pi / 180.0
+         
         self.SAVE = const.SAVE
         self.verbose = const.verbose
         if self.verbose:
@@ -265,13 +269,14 @@ class Network:
 
         self.PERT_TYPE = const.PERT_TYPE
         self.I0 = np.array(const.I0, dtype=np.float32)
-        self.I0 *= self.M0 * np.sqrt(self.Ka[0])
+        self.I0 *= self.M0 # * np.sqrt(self.Ka[0])
 
         if const.PHI0 == 'None':
             self.PHI0 = np.random.uniform(2*np.pi)
         else:
             self.PHI0 = const.PHI0 * np.pi / 180.
 
+        self.SIGMA0 = const.SIGMA0
         self.SIGMA_EXT = const.SIGMA_EXT
 
         self.SEED = const.SEED
@@ -333,9 +338,19 @@ class Network:
         self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
         self.thresh = np.ones( (self.N,), dtype=np.float32)
+        
 
+        # for i_pop in range(self.N_POP):
+        #     theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
+        
+        #     self.rnd_cos = rng.standard_normal(theta.shape[0], dtype=np.float32) * np.cos(theta)
+        #     self.rnd_sin = rng.standard_normal(theta.shape[0], dtype=np.float32) * np.sin(theta)
+        
+        #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop] * (1.0 + self.SIGMA_EXT / np.sqrt(self.Ka[i_pop])  * (self.rnd_cos + self.rnd_sin))
+        #     # self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] = self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] * self.Iext[1]
+        
         for i_pop in range(self.N_POP):
-            self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.Iext[i_pop]
+            # self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.Iext[i_pop]
             self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.THRESH[i_pop]
 
     def print_params(self):
@@ -390,26 +405,25 @@ class Network:
 
     def perturb_inputs(self, step):
 
-        if step<self.N_STIM_ON:
-            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
-            # for i_pop in range(self.N_POP):
-            #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = - self.Iext[i_pop]
+        if step==0:
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = -self.Iext[0] 
+        
         if step==self.N_STIM_ON:
+            # self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
             for i_pop in range(self.N_POP):
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop]
-
-
+        
         if step == self.N_STIM_ON:
             print('CUE ON')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
-                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I0[i_pop], self.SIGMA_EXT, self.PHI0, TYPE=self.PERT_TYPE)
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
 
         if step == self.N_STIM_OFF:
             print('CUE OFF')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
-                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I0[i_pop], self.SIGMA_EXT, self.PHI0, TYPE=self.PERT_TYPE)
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
 
     def generate_Cij(self):
         Cij = np.zeros((self.N, self.N), dtype=np.float32)
@@ -417,7 +431,7 @@ class Network:
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
                 Cab = generate_Cab(self.Ka[j_pre], self.Na[i_post], self.Na[j_pre],
-                    self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED)
+                    self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED, self.PHASE)
                 Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab * self.Jab[i_post][j_pre]
 
         return Cij
@@ -546,7 +560,7 @@ class Network:
                         m1, phase = decode_bump(self.rates[self.csumNa[2]:])
                         amplitudes.append(m1)
                         phases.append(phase)
-
+                    
                     print('m1', amplitudes, 'phase', phases)
 
                     running_step = 0
@@ -568,7 +582,7 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    config = safe_load(open("./config.yml", "r"))
+    config = safe_load(open("./config_itskov.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
@@ -576,17 +590,18 @@ if __name__ == "__main__":
     end = perf_counter()
 
     print("Elapsed (with compilation) = {}s".format((end - start)))
-
-    # config = safe_load(open("./config_bump.yml", "r"))
+    
+    # config = safe_load(open("./config.yml", "r"))
 
     # start = perf_counter()
     # name = config['FILE_NAME']
+    
+    # for i_phase in range(1):
 
-    # for i_phase in range(10):
-
-    #     config['PHI0'] = i_phase * 360.0 /10.0
-
-    #     for i_simul in range(20):
+    #     # config['PHI0'] = i_phase * 360.0 / 10.0
+    #     config['PHI0'] = 180.0
+    
+    #     for i_simul in range(10):
 
     #         config['FILE_NAME'] = name + "_%d_%d" % (i_simul, i_phase)
     #         model = Network(**config)

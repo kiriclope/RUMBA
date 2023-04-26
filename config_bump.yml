@@ -11,10 +11,12 @@ T_STIM_ON: 1250.0
 T_STIM_OFF: 1500.0
 I0: [20.0, 0.]
 PHI0: 180.0
+SIGMA0: 1.0
+
 SIGMA_EXT: 1.0
 PERT_TYPE: 'cos'
 
-FILE_NAME: bump_drift
+FILE_NAME: bump
 TF_NAME: TL
 TF_GAIN: 1
 
@@ -31,7 +33,7 @@ TAU_NMDA: [20.]
 
 FF_DYN: 2
 TAU_FF: [4.]
-VAR_FF: [40.]
+VAR_FF: [60.]
 
 THRESH_DYN: 0
 THRESH: [0.00]
@@ -39,9 +41,9 @@ THRESH: [0.00]
 RATE_DYN: 1
 TAU_MEM: [1.0]
 
-GAIN: 5.0
+GAIN: 1.0
 Jab: [-10.0]
-Iext: [20.0]
+Iext: [60.0]
 M0: 1.0
 
 IF_LEARNING: 0
@@ -50,7 +52,8 @@ IF_STP: 0
 SEED: 10
 STRUCTURE: ['all_cos']
 SIGMA: [0.0]
-KAPPA: [0.5]
+KAPPA: [0.45]
+PHASE: 180.0
 
 TOLERANCE: 1.e-12
 MAXITER: 100
