@@ -63,18 +63,18 @@ def nd_numpy_to_nested(X):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def TF(x, thresh=None, tfname='TL', tfgain=1):
     # if tfname=='NL':
-    #     # return (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
-    #     return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
+    # return 1.0 * (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
+    # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
     # else:
     # return np.where(x > 0, x, 0)
 
     return x * (x > 0)
     # if tfname=='Sig':
-    #     return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
+    # return thresh / (1.0 + 1.0 * np.exp(-(x+10.0)/10))
     # elif tfname=='Sig':
-    #     return 0.5 * (1.0 + erf(x / np.sqrt(2.0)))
+    # return (0.5 * (1.0 + erf(x / np.sqrt(2.0)))).astype(np.float32)
     # elif tfname=='LIF':
-    #     return - 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)
+    # return (- 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)).astype(np.float32)
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
@@ -83,7 +83,7 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] =  np.sqrt(ff_inputs_0) * np.random.normal(0, 1.0, ff_inputs.shape[0]) + ff_inputs_0
+        ff_inputs[:] =  np.sqrt(VAR_FF[0] * ff_inputs_0) * np.random.normal(0, 1.0, ff_inputs.shape[0]) + ff_inputs_0
     else:
         ff_inputs = ff_inputs_0
 
@@ -405,8 +405,8 @@ class Network:
 
     def perturb_inputs(self, step):
 
-        if step==0:
-            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
+        # if step==0:
+        #     self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
         
         if step==self.N_STIM_ON:
             # self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
@@ -462,8 +462,9 @@ class Network:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
         if self.IF_STP:
-            Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
-            Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
+            # Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
+            # Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()   
+            Cij_stp = Cij[:self.Na[0],:self.Na[0]].copy()   
             stp = STP_Model(self.Na[0], self.DT)
 
         if self.IF_LEARNING:
@@ -494,7 +495,8 @@ class Network:
                 stp.markram_stp(self.rates[:self.Na[0]])
                 # stp.hansel_stp(self.rates[:self.Na[0]])
                 # print(self.Jab[0][0], np.mean(stp.A_u_x_stp))
-                Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
+                # Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
+                Cij[:self.Na[0],:self.Na[0]] = stp.A_u_x_stp * Cij_stp
 
             # self.update_inputs(Cij)
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)

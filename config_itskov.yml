@@ -33,7 +33,7 @@ TAU_NMDA: [20., 20.]
 
 FF_DYN: 2
 TAU_FF: [4., 4.]
-VAR_FF: [1., 1.]
+VAR_FF: [100., 1.]
 
 THRESH_DYN: 0
 THRESH: [0.00, 0.00]
@@ -42,11 +42,9 @@ RATE_DYN: 1
 TAU_MEM: [4., 2.]
 
 GAIN: 1.0
-# Jab: [1.0, -1.0, 5.0, 0]
-# Jab: [0.44, -0.28, 0.67, -0.34]
-Jab: [1., -5.0, 2.0, -1.5]
-Iext: [25., 5.0]
-M0: 1.
+Jab: [1.0, -3.0, 5.0, -1.]
+Iext: [20.0, 5.0]
+M0: 1.0
 
 IF_LEARNING: 0
 IF_STP: 0
@@ -54,7 +52,7 @@ IF_STP: 0
 SEED: None
 STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos']
 SIGMA: [0.0, 0.0, 0.0, 0.0]
-KAPPA: [0.5, 0.5, 0.5, 0.1]
+KAPPA: [0.5, 0.5, 0.5, 0.5]
 PHASE: 0.0
 
 TOLERANCE: 1.e-12
