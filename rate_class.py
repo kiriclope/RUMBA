@@ -22,8 +22,6 @@ class Bunch(object):
 def pertur_func(theta, I0, SIGMA0, PHI0, TYPE='cos'):
     if TYPE=='cos':
         return I0 * (1.0 + SIGMA0 * np.cos(theta - PHI0) )
-    # elif TYPE=='cossin':
-    #     return  1.0 + SIGMA0 * ( numba_normal(theta.shape[0], 1) * np.cos(theta) + numba_normal(theta.shape[0], 10) * np.sin(theta) ) 
     else:
         return I0 * gaussian(theta - PHI0, SIGMA0)
 
@@ -85,7 +83,7 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] = np.random.normal(0, np.sqrt(VAR_FF[0]), ff_inputs.shape[0]) + ff_inputs_0
+        ff_inputs[:] =  np.sqrt(ff_inputs_0) * np.random.normal(0, 1.0, ff_inputs.shape[0]) + ff_inputs_0
     else:
         ff_inputs = ff_inputs_0
 
@@ -279,9 +277,11 @@ class Network:
         self.SIGMA0 = const.SIGMA0
         self.SIGMA_EXT = const.SIGMA_EXT
 
-        self.SEED = const.SEED
+        self.SEED = const.SEED        
         if self.SEED == 'None':
             self.SEED = None
+
+            np.random.seed(self.SEED)
 
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
         self.SIGMA = np.array(const.SIGMA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
@@ -350,7 +350,7 @@ class Network:
         #     # self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] = self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] * self.Iext[1]
         
         for i_pop in range(self.N_POP):
-            # self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.Iext[i_pop]
+            self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.Iext[i_pop]
             self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.thresh[self.csumNa[i_pop]:self.csumNa[i_pop+1]] * self.THRESH[i_pop]
 
     def print_params(self):
@@ -406,7 +406,7 @@ class Network:
     def perturb_inputs(self, step):
 
         if step==0:
-            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = -self.Iext[0] 
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
         
         if step==self.N_STIM_ON:
             # self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
@@ -549,19 +549,19 @@ class Network:
 
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
-                    phases.append(phase)
+                    phases.append(phase * 180.0 / np.pi)
 
                     if self.N_POP>1:
                         m1, phase = decode_bump(self.rates[self.csumNa[1]:self.csumNa[2]])
                         amplitudes.append(m1)
-                        phases.append(phase)
+                        phases.append(phase * 180.0 / np.pi)
 
                     if self.N_POP>2:
                         m1, phase = decode_bump(self.rates[self.csumNa[2]:])
                         amplitudes.append(m1)
-                        phases.append(phase)
+                        phases.append(phase * 180.0 / np.pi)
                     
-                    print('m1', amplitudes, 'phase', phases)
+                    print('m1', np.round(amplitudes,2), 'phase', np.round(phases, 2))
 
                     running_step = 0
 
@@ -588,9 +588,21 @@ if __name__ == "__main__":
     start = perf_counter()
     model.run()
     end = perf_counter()
-
-    print("Elapsed (with compilation) = {}s".format((end - start)))
     
+    print("Elapsed (with compilation) = {}s".format((end - start)))
+
+    # config = safe_load(open("./config_itskov.yml", "r"))
+    # start = perf_counter()
+    # name = config['FILE_NAME']
+    
+    # for i_simul in range(10): 
+    #     config['FILE_NAME'] = name + "_%d" % (i_simul)
+    #     model = Network(**config)
+    #     model.run()
+
+    # end = perf_counter()
+    # print("Elapsed (with compilation) = {}s".format((end - start)))
+        
     # config = safe_load(open("./config.yml", "r"))
 
     # start = perf_counter()

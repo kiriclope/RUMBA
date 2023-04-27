@@ -194,15 +194,7 @@ class MeanFieldSpec:
 
         self.kappas = np.linspace(5, 10, 20)
         for kappa in self.kappas:
-            self.kappa[0][0] = kappa 
-            # self.kappa[1][1] = kappa
-            
-            # self.kappa[0][1] = kappa 
-            # self.kappa[1][1] = kappa 
-            # self.kappa[0][1] = .5 * kappa 
-            # self.kappa[1][0] = kappa 
-            # self.kappa[1][1] = kappa 
-           
+            self.kappa[0][0] = kappa            
             self.kappa_Jab = self.Jab * self.kappa
             
             self.solve()
@@ -224,20 +216,20 @@ def get_mf_spec(configname):
 
 if __name__ == "__main__":
 
-    config = safe_load(open("./config.yml", "r"))
+    config = safe_load(open("./configEE.yml", "r"))
     model = MeanFieldSpec(**config)
     model.solve()
     print('m0', model.m0, 'm1', model.m1)
+    fig, ax = plt.subplots(1,2)
+    for iter in range(10):
+        print('iter', iter)
+        model.bifurcation()
     
-    # fig, ax = plt.subplots(1,2)
-    # for iter in range(10):
-    #     print('iter', iter)
-    #     model.bifurcation()
+        ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
+        ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'bo')
+        # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
     
-    #     ax[0].plot(model.kappas, np.abs(model.m0_list[0]), 'ro')
-    #     ax[0].plot(model.kappas, np.abs(model.m0_list[1]), 'bo')
-    #     # ax[0].plot(model.kappas, np.abs(model.m0_list[2]), 'bo')
+        ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
+        ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'bo')
+        # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')
     
-    #     ax[1].plot(model.kappas, np.abs(model.m1_list[0]), 'ro')
-    #     ax[1].plot(model.kappas, np.abs(model.m1_list[1]), 'bo')
-    #     # ax[1].plot(model.kappas, np.abs(model.m1_list[2]), 'bo')

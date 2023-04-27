@@ -2,16 +2,16 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 1500.0
+DURATION: 2000.0
 
-T_STEADY: 100.0
+T_STEADY: 250.0
 T_WINDOW: 10.0
 
 T_STIM_ON: 500.0
 T_STIM_OFF: 1000.0
-I0: [5.0, 0.]
-PHI0: None
-SIGMA0: 180
+I0: [5, 0]
+PHI0: 180.0
+SIGMA0: 1.0
 
 SIGMA_EXT: 2.0
 PERT_TYPE: 'cos'
@@ -21,7 +21,7 @@ TF_NAME: TL
 TF_GAIN: 1
 
 N_POP: 2
-N: 1440
+N: 2000
 K: 1.0
 frac: [.5, .5]
 
@@ -33,27 +33,29 @@ TAU_NMDA: [20., 20.]
 
 FF_DYN: 2
 TAU_FF: [4., 4.]
-VAR_FF: [4., 4.]
+VAR_FF: [1., 1.]
 
 THRESH_DYN: 0
 THRESH: [0.00, 0.00]
 
 RATE_DYN: 1
-TAU_MEM: [10., 5.]
+TAU_MEM: [4., 2.]
 
 GAIN: 1.0
-Jab: [0.5, -1.0, 5.0, 0]
-Iext: [40., 1.0]
-M0: 1.0
+# Jab: [1.0, -1.0, 5.0, 0]
+# Jab: [0.44, -0.28, 0.67, -0.34]
+Jab: [1., -5.0, 2.0, -1.5]
+Iext: [25., 5.0]
+M0: 1.
 
 IF_LEARNING: 0
 IF_STP: 0
 
-SEED: 10
-STRUCTURE: ['all_cos', 'all_cos', 'all', 'all_cos']
+SEED: None
+STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos']
 SIGMA: [0.0, 0.0, 0.0, 0.0]
-KAPPA: [1.0, 0.0, 1.0, 0.0]
-PHASE: 180.
+KAPPA: [0.5, 0.5, 0.5, 0.1]
+PHASE: 0.0
 
 TOLERANCE: 1.e-12
 MAXITER: 100

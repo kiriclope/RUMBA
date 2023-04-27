@@ -260,20 +260,34 @@ def line_phases(filename, config):
 
     name = filename
 
-    for i_phase in range(0,1):
-       for i_simul in range(10):
+    for i_simul in range(10):
 
-          df, df_E, df_I = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config + '.yml')
+        df, df_E, df_I = get_df(name + "_%d_1.0" % (i_simul), config + '.yml')
 
-          times = df_E.time.unique()
-          n_times = len(times)
-          n_neurons = len(df_E.neurons.unique())
+        times = df_E.time.unique()
+        n_times = len(times)
+        n_neurons = len(df_E.neurons.unique())
           
-          array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-          m1, phase = decode_bump(array)
+        array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+        m1, phase = decode_bump(array)
+        
+        phase = phase * 180.0 / np.pi - 180.0
+        plt.plot(times, phase, alpha=.25)
+    
+    # for i_phase in range(0,1):
+    #    for i_simul in range(10):
 
-          phase = phase * 180.0 / np.pi - 180.0
-          plt.plot(times, phase, alpha=.25)
+    #       df, df_E, df_I = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config + '.yml')
+
+    #       times = df_E.time.unique()
+    #       n_times = len(times)
+    #       n_neurons = len(df_E.neurons.unique())
+          
+    #       array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+    #       m1, phase = decode_bump(array)
+
+    #       phase = phase * 180.0 / np.pi - 180.0
+    #       plt.plot(times, phase, alpha=.25)
 
     plt.yticks([-180, -90, 0, 90, 180])
     plt.xlabel('Time (a.u.)')

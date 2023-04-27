@@ -64,7 +64,7 @@ def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_normal(size, SEED=1):
-    np.random.seed(SEED)
+    # np.random.seed(SEED)
     
     res = np.zeros(size)
     for i in range(res.shape[0]):
@@ -192,7 +192,7 @@ def strided_method(ar):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PHASE=0):
 
-    np.random.seed(SEED)
+    # np.random.seed(SEED)
     
     Pij = np.zeros((Na, Nb), dtype=np.float32)
     Cij = np.zeros((Na, Nb), dtype=np.float32)
@@ -202,33 +202,37 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
         theta = np.linspace(0.0, 2.0 * np.pi, Nb)
         phi = np.linspace(0.0, 2.0 * np.pi, Na)
         
-        if 'perm' in STRUCTURE:
-            print('permuted map')
-            theta = np.random.permutation(theta) - np.pi
-            # phi = np.random.permutation(phi)
-
+        # if 'perm' in STRUCTURE:
+        #     print('permuted map')
+        #     theta = np.random.permutation(theta) - np.pi
+        #     # phi = np.random.permutation(phi)
+        
         theta = theta.astype(np.float32)
         phi = phi.astype(np.float32)
 
         theta_ij = theta_mat(theta, phi)
-        cos_ij = np.cos(theta_ij - PHASE)
-
         if 'lateral' in STRUCTURE:
-            cos2_ij = np.cos(2.0 * theta_ij)
             print('lateral')
-            Pij[:, :] = cos_ij + cos2_ij
+            cos_ij = np.cos(theta_ij - np.pi)
         else:
-            Pij[:, :] = cos_ij
+            cos_ij = np.cos(theta_ij - PHASE)
+            
+        Pij[:, :] = cos_ij
+            
+        # if 'lateral' in STRUCTURE:
+        #     cos2_ij = np.cos(2.0 * theta_ij - PHASE) 
+        #     print('lateral')
+        #     Pij[:, :] = cos_ij + cos2_ij
+        # else:
+        #     Pij[:, :] = cos_ij
 
     if "ring" in STRUCTURE:
         print('with strong cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(KAPPA)
+        Pij[:, :] = Pij * np.float32(KAPPA)
 
     elif "spec_cos" in STRUCTURE:
         print('with spec cosine structure')
-        Pij[:, :] = Pij[:, :] * np.float32(KAPPA) * np.sqrt(Nb) / Kb
-        # if SIGMA>0.0:
-        #     Pij[:, :] =  Pij[:, :] + np.float32(SIGMA) * numba_normal((Nb,Nb)) / np.sqrt(Kb)        
+        Pij[:, :] = Pij * KAPPA * np.sqrt(Nb) / Kb
     
     elif "gauss" in STRUCTURE:
         Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
@@ -236,16 +240,24 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
     if "all" in STRUCTURE:
         print('with all to all cosine structure')
         # itskov hansel
-        if "cos" in STRUCTURE:
-            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * np.float32(KAPPA)) / np.float32(Nb)
+        if "cos" in STRUCTURE: # 1/N (1 + cos)
+            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA) / Nb
             if SIGMA>0.0:
-                Cij[:, :] =  Cij[:, :] + np.float32(SIGMA) * numba_normal((Nb,Nb)) / np.sqrt(Nb)
-        elif "chaos" in STRUCTURE:
-            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * np.float32(KAPPA)) / np.sqrt(Nb)
+                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
+                
+            Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
+            
+        elif "spec" in STRUCTURE: # 1/N + 1/sqrtN cos
+            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA * np.sqrt(Nb)) / Nb
             if SIGMA>0.0:
-                Cij[:, :] =  Cij[:, :] + np.float32(SIGMA) * numba_normal((Nb,Nb)) / np.sqrt(Nb)
-        else:
+                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
+            
+            Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
+        elif "id" in STRUCTURE:
             Cij[:, :] = np.identity(Nb)
+            
+        else:
+            Cij[:, :] = 1.0 / Nb 
             
         # Cij[:, :] = Cij[:, :] * (Cij>=0)
 
