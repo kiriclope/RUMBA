@@ -2,14 +2,14 @@ verbose: 0
 SAVE: 1
 
 DT: 0.1
-DURATION: 2000.0
+DURATION: 2500.0
 
 T_STEADY: 250.0
 T_WINDOW: 10.0
 
 T_STIM_ON: 500.0
 T_STIM_OFF: 1000.0
-I0: [5, 0]
+I0: [2.0, 0]
 PHI0: 180.0
 SIGMA0: 1.0
 
@@ -29,21 +29,22 @@ SYN_DYN: 0
 TAU_SYN: [4., 2.]
 
 IF_NMDA: 0
-TAU_NMDA: [20., 20.]
+TAU_NMDA: [100., 100.]
 
 FF_DYN: 2
-TAU_FF: [4., 4.]
-VAR_FF: [100., 1.]
+TAU_FF: [2., 4.]
+VAR_FF: [1.25, 1.]
 
-THRESH_DYN: 0
-THRESH: [0.00, 0.00]
+THRESH_DYN: 1
+THRESH: [1.0, 1.0]
+TAU_THRESH: [100., 100.]
 
 RATE_DYN: 1
-TAU_MEM: [4., 2.]
+TAU_MEM: [20., 10.]
 
-GAIN: 1.0
-Jab: [1.0, -3.0, 5.0, -1.]
-Iext: [20.0, 5.0]
+GAIN: 0.5
+Jab: [1.0, -6.0, 3.0, -1.]
+Iext: [35.0, 5]
 M0: 1.0
 
 IF_LEARNING: 0

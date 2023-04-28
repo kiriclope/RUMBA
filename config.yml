@@ -18,14 +18,14 @@ DT: 0.1
 # T_STIM_ON: 4500.0
 # T_STIM_OFF: 4750.0
 
-I0: [0.2, 0.]
+I0: [5.0, 0.]
 PHI0: 180
 SIGMA0: 1.0
 
 SIGMA_EXT: 10.0
 PERT_TYPE: 'cos'
 
-FILE_NAME: chaos2
+FILE_NAME: chaos
 TF_NAME: TL
 TF_GAIN: 1
 
@@ -65,9 +65,9 @@ IF_LEARNING: 0
 IF_STP: 0
 
 SEED: 10
-STRUCTURE: ['spec_cos', 'None', 'None', 'None']
-SIGMA: [0.0, 2.5, 0.5, 2.5]
-KAPPA: [2.0, 0.5, 3.5, 0.5]
+STRUCTURE: ['spec_cos', 'spec_cos_lateral', 'spec_cos', 'spec_cos_lateral']
+SIGMA: [0.0, 0.0, 0.0, 0.0]
+KAPPA: [1.25, 1.0, 1.25, 1.0]
 PHASE: 0 
 
 TOLERANCE: 1.e-12
