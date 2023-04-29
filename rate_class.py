@@ -93,7 +93,6 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
 
     return ff_inputs
 
-
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 
