@@ -31,7 +31,7 @@ TF_GAIN: 1
 
 N_POP: 2
 N: 10000
-K: 700
+K: 500
 frac: [.5, .5]
 
 SYN_DYN: 1
@@ -46,6 +46,7 @@ VAR_FF: [10., 4.]
 
 THRESH_DYN: 0
 THRESH: [0.00, 0.00]
+TAU_THRESH: [100., 100.]
 
 RATE_DYN: 0
 TAU_MEM: [5.0, 2.0]
@@ -65,9 +66,9 @@ IF_LEARNING: 0
 IF_STP: 0
 
 SEED: 10
-STRUCTURE: ['spec_cos', 'spec_cos_lateral', 'spec_cos', 'spec_cos_lateral']
+STRUCTURE: ['spec_cos_nq', 'no_quench', 'no_quench', 'no_quench']
 SIGMA: [0.0, 0.0, 0.0, 0.0]
-KAPPA: [1.25, 1.0, 1.25, 1.0]
+KAPPA: [5.5, 0.0, 0.0, 0.0]
 PHASE: 0 
 
 TOLERANCE: 1.e-12

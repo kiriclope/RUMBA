@@ -9,7 +9,7 @@ T_WINDOW: 10.0
 
 T_STIM_ON: 1000.0
 T_STIM_OFF: 1500.0
-I0: [2.0, 0]
+I0: [15.0, 0]
 PHI0: 180.0
 SIGMA0: 1.0
 
@@ -35,25 +35,25 @@ FF_DYN: 2
 TAU_FF: [2., 4.]
 VAR_FF: [1.0, 1.0]
 
-THRESH_DYN: 1
+THRESH_DYN: 0
 THRESH: [2, 2]
 TAU_THRESH: [100., 100.]
 
 RATE_DYN: 1
 TAU_MEM: [20., 10.]
 
-GAIN: 0.5
-Jab: [1.0, -4.0, 3.0, -1.]
-Iext: [8.0, 5]
+GAIN: 1.0
+Jab: [1.0, -2.0, 2.0, -1.]
+Iext: [6.0, 5.0]
 M0: 1.0
 
 IF_LEARNING: 0
 IF_STP: 0
 
 SEED: None
-STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos_lateral']
+STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos']
 SIGMA: [0.0, 0.0, 0.0, 0.0]
-KAPPA: [0.5, 0.5, 0.5, 0.5]
+KAPPA: [0.55, 0.55, 0.55, 0.55]
 PHASE: 0.0
 
 TOLERANCE: 1.e-12

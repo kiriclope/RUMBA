@@ -3,13 +3,64 @@ from numba import jit, njit
 from scipy.special import i0
 from scipy.ndimage import convolve
 
+@jit(nopython=False, parallel=False, fastmath=True, cache=True)
+def numba_sample_proba(p, size):
 
-# @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+    shape = size
+    # if shape is not None:
+    #     size = np.prod(shape).astype(np.intp)
+    # else:
+    #     size = 1
+
+    if np.count_nonzero(p > 0) < size:
+        raise ValueError("Fewer non-zero entries in p than size")
+
+    n_uniq = 0
+    p = p.copy()
+    found = np.zeros(shape).astype(np.int64)
+    flat_found = found.ravel()
+
+    while n_uniq < size:
+        x = np.random.rand(size - n_uniq)
+        if n_uniq > 0:
+            p[flat_found[0:n_uniq]] = 0
+        cdf = np.cumsum(p)
+        cdf /= cdf[-1]
+        new = cdf.searchsorted(x, side='right')
+        _, unique_indices = np.unique(new, return_index=True)
+        unique_indices.sort()
+        new = new.take(unique_indices)
+        flat_found[n_uniq:n_uniq + new.size] = new
+        n_uniq += new.size
+
+    idx = found
+    # print(idx)
+    return idx
+
+
+@jit(nopython=False, parallel=False, fastmath=True, cache=True)
+def numba_random_choice(K, N, p, DUM=1):
+
+    Cij = np.zeros((N, N), dtype=np.float32)
+
+    for i in range(N):
+        if DUM==0:
+            id_pres = np.random.choice(N, np.int(K), replace=False)
+        else:
+            id_pres = numba_sample_proba(p[i], K)
+
+        for j in id_pres:
+            Cij[i, j] = 1.0
+
+    return Cij
+
+
+# @jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def moving_average(x, w=3) :
     return convolve(x, np.ones(w), mode='reflect') / w
 
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_update_local_field(DJij, smooth, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
 
     # DJij = DJij * EXP_DT_TAU
@@ -30,7 +81,7 @@ def numba_update_local_field(DJij, smooth, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
 
     return DJij
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
 
     DJij = DJij * EXP_DT_TAU
@@ -38,7 +89,7 @@ def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
 
     return DJij
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_normal(size, SEED=1):
     # np.random.seed(SEED)
     
@@ -50,7 +101,7 @@ def numba_normal(size, SEED=1):
     return res
 
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_multiple_maps(K, N, KAPPA, N_MAPS):
 
     KAPPA_ = KAPPA / np.sqrt(K) / N_MAPS
@@ -80,7 +131,7 @@ def numba_multiple_maps(K, N, KAPPA, N_MAPS):
 
     return Jij
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_update_DJij(DJij, rates, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
 
     # KAPPA_DT_TAU = KAPPA * DT_TAU
@@ -114,7 +165,7 @@ def numba_update_DJij(DJij, rates, EXP_DT_TAU, KAPPA, DT_TAU, ALPHA):
 
     return DJij
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def gaussian(theta, sigma):
     sigma = sigma * np.pi / 180.0
 
@@ -124,12 +175,12 @@ def gaussian(theta, sigma):
         return np.ones(theta.shape)
 
 
-# @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+# @jit(nopython=False, parallel=True, fastmath=True, cache=True)
 # def von_mises(theta, kappa):
 #     return np.exp(kappa * np.cos(theta)) / (2.0 * np.pi * i0(kappa))
 
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
     norm = (Cij>0) * ALPHA * Cij * rates**2
     Cij = Cij + ETA_DT * (np.outer(rates, rates) - norm)
@@ -138,7 +189,7 @@ def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
     return Cij
 
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
 def theta_mat(theta, phi):
     theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
 
@@ -153,7 +204,7 @@ def theta_mat(theta, phi):
     return theta_mat
 
 
-@jit(nopython=True, parallel=False, fastmath=True, cache=True)
+@jit(nopython=False, parallel=False, fastmath=True, cache=True)
 def strided_method(ar):
     a = np.concatenate((ar, ar[1:]))
     L = len(ar)
@@ -161,12 +212,12 @@ def strided_method(ar):
     return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
 
 
-# @jit(nopython=True, parallel=True, fastmath=True, cache=True)
+# @jit(nopython=False, parallel=True, fastmath=True, cache=True)
 # def numba_i0(*args):
 #     return i0(*args)
 
-@jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PHASE=0):
+@jit(nopython=False, parallel=True, fastmath=True, cache=True)
+def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, PHASE=0):
 
     # np.random.seed(SEED)
     
@@ -276,15 +327,24 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1, KAPPA=0.5, SEED=None, PH
 
     elif "spec_rand" in STRUCTURE:
         print("with random spec")
-        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
+        Cij[:, :] = numba_random_choice(int(Kb-np.sqrt(Kb)), Nb, Pij) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
+        # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < KAPPA * np.sqrt(Kb) /Nb)
 
     elif "spec_cos_weak" in STRUCTURE:
         print("with weak cos spec")
         Pij[:, :] = np.sqrt(Kb) * Pij[:, :] + 1.0
-        Cij[:, :] = SIGMA * (np.random.rand(Na, Nb) < (np.sqrt(Kb) / Nb) * Pij )
+        Cij[:, :] = numba_random_choice(int(Kb-np.sqrt(Kb)), int(Nb), Pij)
+        Cij[:, :] = Cij[:, :] + SIGMA * (np.random.rand(Na, Nb) < (np.sqrt(Kb) / Nb) * Pij )
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
-        
+
+    elif "spec_cos_nq" in STRUCTURE:
+        print("with weak cos spec")
+        Pij[:, :] =  (Kb / Nb) * (Pij[:, :] + 1.0)
+        Cij[:, :] = numba_random_choice(int(Kb), int(Nb), Pij)
+
+    elif "no_quench" in STRUCTURE:
+        Cij[:, :] = numba_random_choice(int(Kb), int(Nb), Pij, DUM=0)
     else:
         Pij[:, :] = Pij[:, :] + 1.0
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)

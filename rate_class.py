@@ -59,6 +59,7 @@ def nd_numpy_to_nested(X):
 
     return df
 
+
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_erf(x):
     res = np.zeros(x.shape[0])
@@ -87,7 +88,7 @@ def numba_update_ff_inputs(ff_inputs, ff_inputs_0, EXP_DT_TAU_FF, DT_TAU_FF, VAR
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN==2:
-        ff_inputs[:] =  np.sqrt(VAR_FF[0] * ff_inputs_0) * np.random.normal(0, 1.0, ff_inputs.shape[0]) + ff_inputs_0
+      ff_inputs[:] =  np.sqrt(VAR_FF[0] * ff_inputs_0) * np.random.normal(0, 1.0, ff_inputs.shape[0]) + ff_inputs_0
     else:
         ff_inputs = ff_inputs_0
 
@@ -593,7 +594,7 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    config = safe_load(open("./config_itskov.yml", "r"))
+    config = safe_load(open("./config.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
