@@ -18,7 +18,7 @@ DT: 0.1
 # T_STIM_ON: 4500.0
 # T_STIM_OFF: 4750.0
 
-I0: [3.0, 0.]
+I0: [5.0, 0.]
 PHI0: 180
 SIGMA0: 1.0
 
@@ -30,8 +30,8 @@ TF_NAME: TL
 TF_GAIN: 1
 
 N_POP: 2
-N: 10000
-K: 500
+N: 2000
+K: 100
 frac: [.5, .5]
 
 SYN_DYN: 1
@@ -44,26 +44,28 @@ FF_DYN: 0
 TAU_FF: [4., 4.]
 VAR_FF: [10., 4.]
 
-THRESH_DYN: 1
+THRESH_DYN: 0
 THRESH: [1.00, 1.00]
 TAU_THRESH: [100., 100.]
 
-RATE_DYN: 1
+RATE_DYN: 0
 TAU_MEM: [20.0, 10.0]
 
 GAIN: 1.0
-Jab: [0.44, -0.28, 0.67, -0.34]
+Jab: [100.5, -1.4, 1.2, -.9]
+# Jab: [70.0, -0.28, 0.67, -0.34]
 # Jab: [1, -1.5, 1, -1]
 # Jab: [0.00133, -0.08, 0.02, -0.133]
 # Jab: [0.00347, -0.10, 0.05, -0.15]
 
-Iext: [0.5, 0.25]
-# Iext: [1.9, 4.0]
+# Iext: [0.5, 0.25]
+Iext: [2.0, 1.185]
+J# Iext: [1.9, 4.0]
 
 M0: 1.0
 
 IF_LEARNING: 0
-IF_STP: 0
+IF_STP: 1
 
 SEED: None
 STRUCTURE: ['spec_cos', 'None', 'None', 'None']

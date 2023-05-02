@@ -37,6 +37,7 @@ VAR_FF: [60.]
 
 THRESH_DYN: 0
 THRESH: [0.00]
+TAU_THRESH: [100., 100.]
 
 RATE_DYN: 1
 TAU_MEM: [1.0]
@@ -47,7 +48,7 @@ Iext: [60.0]
 M0: 1.0
 
 IF_LEARNING: 0
-IF_STP: 0
+IF_STP: 1
 
 SEED: 10
 STRUCTURE: ['all_cos']

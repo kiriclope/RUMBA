@@ -40,6 +40,8 @@ def nd_numpy_to_nested(X):
 
     if X.shape[-1] == 5:
         variables = ['rates', 'ff', 'h_E', 'h_I']
+    elif X.shape[-1] == 6:
+        variables = ['rates', 'ff', 'h_E', 'h_I', 'stp']
     elif X.shape[-1]==4:
         variables = ['rates', 'ff', 'h']
     else:
@@ -501,8 +503,8 @@ class Network:
             self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF, self.VAR_FF, self.FF_DYN)
 
             if self.IF_STP:
-                stp.markram_stp(self.rates[:self.Na[0]])
-                # stp.hansel_stp(self.rates[:self.Na[0]])
+                # stp.markram_stp(self.rates[:self.Na[0]])
+                stp.hansel_stp(self.rates[:self.Na[0]])
                 # print(self.Jab[0][0], np.mean(stp.A_u_x_stp))
                 # Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
                 Cij[:self.Na[0],:self.Na[0]] = stp.A_u_x_stp * Cij_stp
@@ -547,6 +549,9 @@ class Network:
                     amplitudes = []
                     phases = []
 
+                    # if self.IF_STP:
+                    #     data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs, np.hstack((stp.u_stp, stp.x_stp)))).T)
+                    # else:
                     data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
 
                     try:
@@ -593,7 +598,7 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    config = safe_load(open("./config.yml", "r"))
+    config = safe_load(open("./config_itskov.yml", "r"))
     model = Network(**config)
 
     start = perf_counter()
