@@ -321,8 +321,8 @@ class Network:
         
         rng = np.random.default_rng()
         ## random initial conditions
-        mean = [2, 2, 5]
-        var = [.5, .5, 1]
+        # mean = [2, 2, 5]
+        # var = [.5, .5, 1]
 
         for i_pop in range(self.N_POP):
             # self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
@@ -445,7 +445,6 @@ class Network:
                 Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab * self.Jab[i_post][j_pre]
 
         return Cij
-
 
     def generate_Cij_NMDA(self, Cij):
         Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float32)

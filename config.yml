@@ -1,13 +1,13 @@
 verbose: 0
 SAVE: 1
 
-DURATION: 2000.0
+DURATION: 2500.0
 
-T_STEADY: 250.0
+T_STEADY: 750.0
 T_WINDOW: 10.0
 
-T_STIM_ON: 500.0
-T_STIM_OFF: 1000.0
+T_STIM_ON: 1000.0
+T_STIM_OFF: 1500.0
 
 DT: 0.1
 # DURATION: 20.0
@@ -18,7 +18,7 @@ DT: 0.1
 # T_STIM_ON: 4500.0
 # T_STIM_OFF: 4750.0
 
-I0: [5.0, 0.]
+I0: [3.0, 0.]
 PHI0: 180
 SIGMA0: 1.0
 
@@ -44,12 +44,12 @@ FF_DYN: 0
 TAU_FF: [4., 4.]
 VAR_FF: [10., 4.]
 
-THRESH_DYN: 0
-THRESH: [0.00, 0.00]
+THRESH_DYN: 1
+THRESH: [1.00, 1.00]
 TAU_THRESH: [100., 100.]
 
-RATE_DYN: 0
-TAU_MEM: [5.0, 2.0]
+RATE_DYN: 1
+TAU_MEM: [20.0, 10.0]
 
 GAIN: 1.0
 Jab: [0.44, -0.28, 0.67, -0.34]
@@ -65,10 +65,10 @@ M0: 1.0
 IF_LEARNING: 0
 IF_STP: 0
 
-SEED: 10
-STRUCTURE: ['spec_cos_nq', 'no_quench', 'no_quench', 'no_quench']
-SIGMA: [0.0, 0.0, 0.0, 0.0]
-KAPPA: [5.5, 0.0, 0.0, 0.0]
+SEED: None
+STRUCTURE: ['spec_cos', 'None', 'None', 'None']
+SIGMA: [1.0, 0.0, 0.0, 0.0]
+KAPPA: [4.0, 0.0, 0.0, 0.0]
 PHASE: 0 
 
 TOLERANCE: 1.e-12

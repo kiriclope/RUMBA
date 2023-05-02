@@ -31,12 +31,30 @@ def numba_sample_proba(p, size):
         unique_indices.sort()
         new = new.take(unique_indices)
         flat_found[n_uniq:n_uniq + new.size] = new
-        n_uniq += new.size
+        n_uniq = n_uniq + new.size
 
     idx = found
     # print(idx)
     return idx
 
+# @jit(nopython=False, parallel=False, fastmath=True, cache=True)
+# def numba_random_choice(K, N, p, DUM=1):
+#     Cij = np.zeros((N, N), dtype=np.float32)
+
+#     if DUM==0:
+#         id_pattern = np.random.choice(N, np.int64(K/2.0), replace=False)
+#     else:
+#         id_pattern = numba_sample_proba(p[0], np.int64(K/2.0))
+
+#     for i in range(N):
+#         if i>0:
+#             id_pattern = (id_pattern + 1) % N
+
+#         for j in id_pattern:
+#             Cij[i, j] = 1.0
+#             Cij[j, i] = 1.0
+
+#     return Cij
 
 @jit(nopython=False, parallel=False, fastmath=True, cache=True)
 def numba_random_choice(K, N, p, DUM=1):
@@ -45,12 +63,62 @@ def numba_random_choice(K, N, p, DUM=1):
 
     for i in range(N):
         if DUM==0:
-            id_pres = np.random.choice(N, np.int(K), replace=False)
+            id_pres = np.random.choice(N, np.int64(K), replace=False)
         else:
-            id_pres = numba_sample_proba(p[i], K)
+            id_pres = numba_sample_proba(p[i], np.int64(K))
 
         for j in id_pres:
             Cij[i, j] = 1.0
+
+    return Cij
+
+
+@jit(nopython=False, parallel=False, fastmath=True, cache=True)
+def numba_reciprocal_fixed(K, N, p, Pij):
+
+    Cij = np.zeros((N, N), dtype=np.float32)
+    idx = np.arange(N)
+
+    if p>0:
+        id_recip = np.random.choice(idx, np.int64(p*K), replace=False)
+        id_not_recip = np.random.choice(idx[~id_recip], np.int64((1.0-p)*K), replace=False)
+    else:
+        id_recip = []
+        id_not_recip = np.random.choice(idx, np.int64(K), replace=False)
+
+    for i in range(N):
+
+        if i>0:
+            id_recip = np.roll(id_recip, 1)
+            id_not_recip = np.roll(id_not_recip, 1)
+
+        for j in id_recip:
+            Cij[i, j] = 1.0
+            Cij[j, i] = 1.0
+
+        for j in id_not_recip:
+            Cij[i, j] = 1.0
+
+    return Cij*Pij
+
+@jit(nopython=True, parallel=True, fastmath=True, cache=True)
+def numba_reciprocal(K, N, p, Pij):
+    """""
+    Based on Rao's code
+    """""
+    Cij = np.zeros((N, N), dtype=np.float32)
+
+    for j in range(N):
+        for i in range(j):
+            if np.random.uniform(0.0, 1.0) <= (p * Pij[i, j] + (1.0 - p) * Pij[i, j]**2):
+                Cij[i, j] = 1.0
+                Cij[j, i] = 1.0
+            else:
+                if np.random.uniform(0.0, 1.0) <= 2.0 * (1.0 - p) * Pij[i, j] * (1.0 - Pij[i, j]):
+                    if np.random.uniform(0.0, 1.0) > 0.5:
+                        Cij[i, j] = 1.0
+                    else:
+                        Cij[j, i] = 1.0
 
     return Cij
 
@@ -243,8 +311,9 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
             cos_ij = np.cos(theta_ij - np.pi)
         else:
             cos_ij = np.cos(theta_ij - PHASE)
-            
-        Pij[:, :] = cos_ij
+
+        if 'cos' in STRUCTURE:
+            Pij[:, :] = cos_ij
             
         # if 'lateral' in STRUCTURE:
         #     cos2_ij = np.cos(2.0 * theta_ij - PHASE) 
@@ -345,9 +414,29 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
 
     elif "no_quench" in STRUCTURE:
         Cij[:, :] = numba_random_choice(int(Kb), int(Nb), Pij, DUM=0)
-    else:
-        Pij[:, :] = Pij[:, :] + 1.0
-        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb / Nb) * Pij)
 
-        
+    elif "reciprocal" in STRUCTURE:
+        print('with reciprocal connections')
+        # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) <= (1.0 - SIGMA) * Kb / Nb * (1.0 - Kb / Nb))
+        # dum = 1.0 * (np.random.rand(Na, Nb) <= (SIGMA * (Kb / Nb) + (1.0 - SIGMA) * Kb**2 / Nb**2))
+        # Cij[:, :] = Cij + dum + dum.T
+
+        if "spec" in STRUCTURE:
+            Pij[:, :] = Kb / Nb * (Pij + 1.0)
+            Cij[:, :] = numba_reciprocal(Kb, Nb, SIGMA, Pij)
+        else:
+            Cij[:, :] = numba_reciprocal(Kb, Nb, SIGMA,  Kb / Nb * np.ones((Nb, Nb)))
+
+        if "cos" in STRUCTURE:
+            Pij[:, :] = (Pij + 1.0)
+            Cij[:, :] = Cij * Pij
+
+    elif "recip_nq" in STRUCTURE:
+        print('with fixed reciprocal connections')
+        Pij[:, :] = Kb / Nb * (Pij + 1.0)
+        Cij[:, :] = numba_reciprocal_fixed(Kb, Nb, SIGMA, Pij)
+    else:
+        Pij[:, :] = (Kb / Nb) *(Pij + 1.0)
+        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+
     return Cij
