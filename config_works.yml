@@ -1,15 +1,15 @@
 verbose: 0
 SAVE: 1
 
-DT: 0.001
-DURATION: 10.0
+DT: 0.1
+DURATION: 2500.0
 
-T_STEADY: 2.0
-T_WINDOW: .05
+T_STEADY: 500.0
+T_WINDOW: 10.0
 
-T_STIM_ON: 3.0
-T_STIM_OFF: 4.0
-I0: [5.0, 0.]
+T_STIM_ON: 1000.0
+T_STIM_OFF: 2000.0
+I0: [50.0, 0.]
 PHI0: 180.0
 SIGMA0: 1.0
 
@@ -40,11 +40,11 @@ THRESH: [0.00]
 TAU_THRESH: [100., 100.]
 
 RATE_DYN: 1
-TAU_MEM: [.010]
+TAU_MEM: [10.0]
 
 GAIN: 1.0
-Jab: [-40.0]
-Iext: [60.0]
+Jab: [-300.0]
+Iext: [25.0]
 M0: 1.0
 
 IF_LEARNING: 0
@@ -53,7 +53,7 @@ IF_STP: 1
 SEED: None
 STRUCTURE: ['all_cos']
 SIGMA: [0.0]
-KAPPA: [1.2]
+KAPPA: [.40]
 PHASE: 180.0
 
 TOLERANCE: 1.e-12

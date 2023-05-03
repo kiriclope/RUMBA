@@ -106,6 +106,14 @@ def line_rates(df):
 
     plt.xlabel('Rates (Hz)')
 
+def line_stp(df):
+    count=0
+    while count < 100:
+        idx = np.random.randint(10000)
+        small_df = df[df.neurons==idx]
+        sns.lineplot(data=small_df, x='time', y='A_stp', hue='neurons', legend=None)
+        count+=1
+
 def line_inputs(df):
     df1 = df[df.time>.8]
     idx = np.random.randint(10000)
@@ -123,6 +131,15 @@ def hist_rates(df, window):
     mean_df = df1.groupby('neurons').mean()
     sns.histplot(mean_df, x=mean_df.rates, kde=True)
     plt.xlabel('Rates (Hz)')
+
+def hist_stp(df, window=[0,1]):
+
+    df1 = df[df.time < window[1]]
+    df1 = df1[df1.time >= window[0]]
+
+    mean_df = df1.groupby('neurons').mean()
+    sns.histplot(mean_df, x=mean_df.A_stp, kde=True)
+    plt.xlabel('A_stp')
 
 def corr_rates(df):
     mean_df = df.groupby('neurons').mean()
@@ -163,7 +180,7 @@ def heatmap(df, vmax=20):
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
 
-def spatial_profile(df, window=10, n=250):
+def spatial_profile(df, window=10, n=250, IF_NORM=0):
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
 
@@ -176,9 +193,29 @@ def spatial_profile(df, window=10, n=250):
     print(smooth.shape)
     smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0]))
 
+    if IF_NORM:
+        smooth /= np.mean(array)
+
     plt.plot(smooth)
     plt.xlabel('Neuron #')
     plt.ylabel('Rate (Hz)')
+
+def spatial_profile_stp(df, window=[0,1], n=10):
+    df1 = df[df.time < window[1]]
+    df1 = df1[df1.time >= window[0]]
+
+    mean_df = df1.groupby('neurons').mean()
+    array = mean_df[['A_stp']].to_numpy()
+
+    m1, phase = decode_bump(array)
+
+    smooth = circcvl(array[:, 0], windowSize=n)
+    print(smooth.shape)
+    smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0]))
+
+    plt.plot(smooth)
+    plt.xlabel('Neuron #')
+    plt.ylabel('A_stp')
 
 
 def init(frames, ax):

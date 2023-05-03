@@ -26,7 +26,7 @@ def pertur_func(theta, I0, SIGMA0, PHI0, TYPE='cos'):
         return I0 * gaussian(theta - PHI0, SIGMA0)
 
 
-def nd_numpy_to_nested(X):
+def nd_numpy_to_nested(X, N_POP=2, IF_STP=0):
     """Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)
     into pandas DataFrame (with time series as pandas Series in cells)
     Parameters
@@ -38,14 +38,16 @@ def nd_numpy_to_nested(X):
     """
     print(X.shape)
 
-    if X.shape[-1] == 5:
-        variables = ['rates', 'ff', 'h_E', 'h_I']
-    elif X.shape[-1] == 6:
-        variables = ['rates', 'ff', 'h_E', 'h_I', 'stp']
-    elif X.shape[-1]==4:
-        variables = ['rates', 'ff', 'h']
+    if IF_STP:
+        if N_POP==2:
+            variables = ['rates', 'ff', 'h_E', 'h_I', 'u_stp', 'x_stp', 'A_stp']
+        else:
+            variables = ['rates', 'ff', 'h_E', 'u_stp', 'x_stp', 'A_stp']
     else:
-        variables = ['rates', 'ff', 'h_E1', 'h_E2', 'h_I']
+        if N_POP==2:
+            variables = ['rates', 'ff', 'h_E', 'h_I']
+        else:
+            variables = ['rates', 'ff', 'h_E']
 
     df = DataFrame()
     idx = np.arange(0, X.shape[1], 1)
@@ -57,7 +59,7 @@ def nd_numpy_to_nested(X):
         # print(df_i)
         df = concat((df, df_i))
 
-    print(df)
+    # print(df)
 
     return df
 
@@ -477,6 +479,7 @@ class Network:
             # Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
             Cij_stp = Cij[:self.Na[0],:self.Na[0]].copy()
             stp = STP_Model(self.Na[0], self.DT)
+            print('stp:', stp.USE, stp.TAU_REC, stp.TAU_FAC)
 
         if self.IF_LEARNING:
             DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float32)
@@ -501,13 +504,6 @@ class Network:
 
             # self.update_ff_inputs()
             self.ff_inputs = numba_update_ff_inputs(self.ff_inputs, self.ff_inputs_0, self.EXP_DT_TAU_FF, self.DT_TAU_FF, self.VAR_FF, self.FF_DYN)
-
-            if self.IF_STP:
-                # stp.markram_stp(self.rates[:self.Na[0]])
-                stp.hansel_stp(self.rates[:self.Na[0]])
-                # print(self.Jab[0][0], np.mean(stp.A_u_x_stp))
-                # Cij[:self.Na[0],:self.Na[0]] = Cij_fix + stp.A_u_x_stp * Cij_stp
-                Cij[:self.Na[0],:self.Na[0]] = stp.A_u_x_stp * Cij_stp
 
             # self.update_inputs(Cij)
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)
@@ -549,10 +545,18 @@ class Network:
                     amplitudes = []
                     phases = []
 
-                    # if self.IF_STP:
-                    #     data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs, np.hstack((stp.u_stp, stp.x_stp)))).T)
-                    # else:
-                    data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
+                    if self.IF_STP:
+                        if self.N_POP==2:
+
+                            data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs,
+                                                   np.pad(stp.u_stp, (0, self.Na[1])),
+                                                   np.pad(stp.x_stp, (0, self.Na[1])),
+                                                   np.pad(stp.A_u_x_stp, (0, self.Na[1]))
+                                                          )).T)
+                        else:
+                            data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs, stp.u_stp, stp.x_stp, stp.A_u_x_stp)).T)
+                    else:
+                        data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
 
                     try:
                         print('time (ms)', np.round(step/self.N_STEPS, 2),
@@ -581,10 +585,15 @@ class Network:
 
                     running_step = 0
 
+            if self.IF_STP:
+                # stp.markram_stp(self.rates[:self.Na[0]].copy())
+                stp.hansel_stp(self.rates[:self.Na[0]].copy())
+                self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
+
         self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
-        self.df = nd_numpy_to_nested(data)
+        self.df = nd_numpy_to_nested(data, N_POP=self.N_POP, IF_STP=self.IF_STP)
 
         if self.SAVE:
             print('saving data to', self.FILE_NAME + '_' + str(self.GAIN) + '.h5')
