@@ -75,15 +75,15 @@ def numba_erf(x):
 def TF(x, thresh=None, tfname='TL', tfgain=1):
     # if tfname=='NL':
     # return 1.0 * (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
-    # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float32)
+    # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float64)
     # else:
 
     return x * (x > thresh)
 
     # elif tfname=='Sig':
-    # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float32)
+    # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
     # elif tfname=='LIF':
-    # return (- 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)).astype(np.float32)
+    # return (- 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)).astype(np.float64)
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
@@ -172,12 +172,12 @@ class Network:
         self.N = int(const.N)
         self.K = const.K
 
-        self.ones_vec = np.ones((self.N,), dtype=np.float32) / self.N_STEPS
+        self.ones_vec = np.ones((self.N,), dtype=np.float64) / self.N_STEPS
 
         self.TAU_SYN = const.TAU_SYN
         self.TAU_FF = const.TAU_FF
 
-        self.VAR_FF = np.array(const.VAR_FF, dtype=np.float32)
+        self.VAR_FF = np.array(const.VAR_FF, dtype=np.float64)
 
         self.TAU_MEM = const.TAU_MEM
         self.TAU_THRESH = const.TAU_THRESH
@@ -228,32 +228,32 @@ class Network:
             self.DT_TAU_THRESH.append(self.DT / self.TAU_THRESH[i_pop])
             
         self.Na = np.array(self.Na, dtype=np.int64)
-        self.Ka = np.array(self.Ka, dtype=np.float32)
+        self.Ka = np.array(self.Ka, dtype=np.float64)
 
-        self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float32)
-        self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float32)
+        self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float64)
+        self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float64)
 
-        self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float32)
-        self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float32)
+        self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float64)
+        self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float64)
 
         if self.IF_NMDA:
-            self.EXP_DT_TAU_NMDA = np.array(self.EXP_DT_TAU_NMDA, dtype=np.float32)
-            self.DT_TAU_NMDA = np.array(self.DT_TAU_NMDA, dtype=np.float32)
+            self.EXP_DT_TAU_NMDA = np.array(self.EXP_DT_TAU_NMDA, dtype=np.float64)
+            self.DT_TAU_NMDA = np.array(self.DT_TAU_NMDA, dtype=np.float64)
 
-        self.EXP_DT_TAU_MEM = np.array(self.EXP_DT_TAU_MEM, dtype=np.float32)
-        self.DT_TAU_MEM = np.array(self.DT_TAU_MEM, dtype=np.float32)
+        self.EXP_DT_TAU_MEM = np.array(self.EXP_DT_TAU_MEM, dtype=np.float64)
+        self.DT_TAU_MEM = np.array(self.DT_TAU_MEM, dtype=np.float64)
 
-        self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float32)
-        self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float32)
+        self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
+        self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
         
         self.csumNa = np.concatenate(([0], np.cumsum(self.Na)))
 
         self.THRESH_DYN = const.THRESH_DYN
-        self.THRESH = np.array(const.THRESH, dtype=np.float32)
+        self.THRESH = np.array(const.THRESH, dtype=np.float64)
 
         self.M0 = const.M0
 
-        self.Jab = np.array(const.Jab, dtype=np.float32).reshape(self.N_POP, self.N_POP)
+        self.Jab = np.array(const.Jab, dtype=np.float64).reshape(self.N_POP, self.N_POP)
 
         print('Jab', self.Jab)
 
@@ -263,7 +263,7 @@ class Network:
         if self.IF_NMDA:
             self.Jab_NMDA = .1 * self.Jab[:, 0] * self.DT_TAU_NMDA[i_pop] / np.sqrt(self.Ka[0])
 
-        self.Iext = np.array(const.Iext, dtype=np.float32)
+        self.Iext = np.array(const.Iext, dtype=np.float64)
 
         print('Iext', self.Iext)
 
@@ -284,7 +284,7 @@ class Network:
         self.Iext *= np.sqrt(self.Ka[0]) * self.M0
 
         self.PERT_TYPE = const.PERT_TYPE
-        self.I0 = np.array(const.I0, dtype=np.float32)
+        self.I0 = np.array(const.I0, dtype=np.float64)
         self.I0 *= self.M0 # * np.sqrt(self.Ka[0])
 
         if const.PHI0 == 'None':
@@ -302,8 +302,8 @@ class Network:
             np.random.seed(self.SEED)
 
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
-        self.SIGMA = np.array(const.SIGMA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
-        self.KAPPA = np.array(const.KAPPA, dtype=np.float32).reshape(self.N_POP, self.N_POP)
+        self.SIGMA = np.array(const.SIGMA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
+        self.KAPPA = np.array(const.KAPPA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
 
         # LEARNING
         self.IF_LEARNING = const.IF_LEARNING
@@ -313,15 +313,15 @@ class Network:
         # self.KAPPA_LEARN = 1.0
         self.KAPPA_LEARN = self.KAPPA[0][0] / np.sqrt(self.Ka[0])
         self.KAPPA_DT_TAU_LEARN = self.KAPPA_LEARN * self.DT_TAU_LEARN
-        self.EXP_DT_TAU_LEARN = np.exp(-self.DT / self.TAU_LEARN, dtype=np.float32)
+        self.EXP_DT_TAU_LEARN = np.exp(-self.DT / self.TAU_LEARN, dtype=np.float64)
 
         self.ALPHA = 1.0
         # self.ALPHA = np.sqrt(self.Ka[0])
         self.ETA_DT = self.DT / self.TAU_SYN[0]
 
-        self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float32))
-        self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float32)
-        self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float32)
+        self.rates = np.ascontiguousarray(np.zeros( (self.N,), dtype=np.float64))
+        self.inputs = np.zeros((self.N_POP, self.N), dtype=np.float64)
+        self.inputs_NMDA = np.zeros((self.N_POP, self.N), dtype=np.float64)
         
         rng = np.random.default_rng()
         ## random initial conditions
@@ -337,27 +337,27 @@ class Network:
         # for i_pop in range(self.N_POP):
         #     if i_pop==0:
         #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[i_pop] + np.sqrt(alpha[i_pop])
-        #                                                             * rng.standard_normal(self.Na[i_pop], dtype=np.float32))
+        #                                                             * rng.standard_normal(self.Na[i_pop], dtype=np.float64))
         #     if i_pop==1:
         #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[0] + np.sqrt(alpha[0])
-        #                                                                 * rng.standard_normal(self.Na[1], dtype=np.float32))
+        #                                                                 * rng.standard_normal(self.Na[1], dtype=np.float64))
 
         #     if i_pop==2:
         #         self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = TF(u0[1] + np.sqrt(alpha[1])
-        #                                                                 * rng.standard_normal(self.Na[2], dtype=np.float32))
+        #                                                                 * rng.standard_normal(self.Na[2], dtype=np.float64))
 
         # print(self.rates[:5])
         # self.mf_rates = m0_func(u0, u1, alpha)
 
-        self.ff_inputs = np.zeros((self.N,), dtype=np.float32)
-        self.ff_inputs_0 = np.ones((self.N,), dtype=np.float32)
-        self.thresh = np.ones( (self.N,), dtype=np.float32)
+        self.ff_inputs = np.zeros((self.N,), dtype=np.float64)
+        self.ff_inputs_0 = np.ones((self.N,), dtype=np.float64)
+        self.thresh = np.ones( (self.N,), dtype=np.float64)
 
         # for i_pop in range(self.N_POP):
         #     theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
 
-        #     self.rnd_cos = rng.standard_normal(theta.shape[0], dtype=np.float32) * np.cos(theta)
-        #     self.rnd_sin = rng.standard_normal(theta.shape[0], dtype=np.float32) * np.sin(theta)
+        #     self.rnd_cos = rng.standard_normal(theta.shape[0], dtype=np.float64) * np.cos(theta)
+        #     self.rnd_sin = rng.standard_normal(theta.shape[0], dtype=np.float64) * np.sin(theta)
 
         #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop] * (1.0 + self.SIGMA_EXT / np.sqrt(self.Ka[i_pop])  * (self.rnd_cos + self.rnd_sin))
         #     # self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] = self.ff_inputs_0[self.csumNa[1]:self.csumNa[1+1]] * self.Iext[1]
@@ -440,7 +440,7 @@ class Network:
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
 
     def generate_Cij(self):
-        Cij = np.zeros((self.N, self.N), dtype=np.float32)
+        Cij = np.zeros((self.N, self.N), dtype=np.float64)
 
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
@@ -451,7 +451,7 @@ class Network:
         return Cij
 
     def generate_Cij_NMDA(self, Cij):
-        Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float32)
+        Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float64)
 
         for i_post in range(self.N_POP):
             Cij_NMDA[self.csumNa[i_post]:self.csumNa[i_post+1]] = (Cij[self.csumNa[i_post]:self.csumNa[i_post+1].copy(), :self.Na[0]]!=0) * self.Jab_NMDA[i_post]
@@ -469,7 +469,7 @@ class Network:
     def run(self):
         NE = self.Na[0]
         Cij = self.generate_Cij()
-        # Cij = csc_matrix(Cij, dtype=np.float32)
+        # Cij = csc_matrix(Cij, dtype=np.float64)
 
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
@@ -482,7 +482,7 @@ class Network:
             print('stp:', stp.USE, stp.TAU_REC, stp.TAU_FAC)
 
         if self.IF_LEARNING:
-            DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float32)
+            DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float64)
             Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
 
             # theta = np.linspace(0.0, 2.0 * np.pi, self.Na[0])
@@ -510,6 +510,12 @@ class Network:
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
+
+            if self.IF_STP:
+                # stp.markram_stp(self.rates[:self.Na[0]].copy())
+                stp.hansel_stp(self.rates[:self.Na[0]].copy())
+                # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
+                self.inputs[0][:self.Na[0]] = stp.A_u_x_stp * self.inputs[0][:self.Na[0]].copy()
 
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA)
@@ -585,11 +591,6 @@ class Network:
 
                     running_step = 0
 
-            if self.IF_STP:
-                # stp.markram_stp(self.rates[:self.Na[0]].copy())
-                stp.hansel_stp(self.rates[:self.Na[0]].copy())
-                self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
-
         self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
@@ -607,26 +608,26 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    config = safe_load(open("./config_itskov.yml", "r"))
-    model = Network(**config)
-
-    start = perf_counter()
-    model.run()
-    end = perf_counter()
-
-    print("Elapsed (with compilation) = {}s".format((end - start)))
-
     # config = safe_load(open("./config_itskov.yml", "r"))
+    # model = Network(**config)
+
     # start = perf_counter()
-    # name = config['FILE_NAME']
-
-    # for i_simul in range(10):
-    #     config['FILE_NAME'] = name + "_%d" % (i_simul)
-    #     model = Network(**config)
-    #     model.run()
-
+    # model.run()
     # end = perf_counter()
+
     # print("Elapsed (with compilation) = {}s".format((end - start)))
+
+    config = safe_load(open("./config_itskov.yml", "r"))
+    start = perf_counter()
+    name = config['FILE_NAME']
+
+    for i_simul in range(10):
+        config['FILE_NAME'] = name + "_%d" % (i_simul)
+        model = Network(**config)
+        model.run()
+
+    end = perf_counter()
+    print("Elapsed (with compilation) = {}s".format((end - start)))
 
     # config = safe_load(open("./config.yml", "r"))
 

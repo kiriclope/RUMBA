@@ -33,18 +33,18 @@ TAU_NMDA: [20.]
 
 FF_DYN: 2
 TAU_FF: [4.]
-VAR_FF: [100.0]
+VAR_FF: [1.0]
 
 THRESH_DYN: 0
-THRESH: [0.00]
+THRESH: [0.0]
 TAU_THRESH: [100., 100.]
 
 RATE_DYN: 1
 TAU_MEM: [.010]
 
 GAIN: 1.0
-Jab: [-40.0]
-Iext: [60.0]
+Jab: [-30.0]
+Iext: [55.0]
 M0: 1.0
 
 IF_LEARNING: 0

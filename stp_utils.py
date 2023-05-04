@@ -10,15 +10,15 @@ class STP_Model():
         self.TAU_REC = 0.1
         self.TAU_FAC = 1.0
         
-        self.u_stp = np.ones(N).astype(np.float32) * self.USE
-        self.x_stp = np.ones(N).astype(np.float32)
-        # self.u_stp = np.random.uniform(size=N).astype(np.float32)
-        # self.x_stp = np.random.uniform(size=N).astype(np.float32)
+        self.u_stp = np.ones(N).astype(np.float64) * self.USE
+        self.x_stp = np.ones(N).astype(np.float64)
+        # self.u_stp = np.random.uniform(size=N).astype(np.float64)
+        # self.x_stp = np.random.uniform(size=N).astype(np.float64)
 
         # u_plus = self.u_stpr + self.USE * (1.0 - self.u_stp)
         # self.A_u_x_stp = u_plus * self.x_stp
 
-        self.A_u_x_stp = np.ones((N,), dtype=np.float32) * self.USE
+        self.A_u_x_stp = np.ones((N,), dtype=np.float64) * self.USE
 
         self.DT = DT
         self.DT_TAU_REC = DT / self.TAU_REC

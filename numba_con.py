@@ -39,7 +39,7 @@ def numba_sample_proba(p, size):
 
 # @jit(nopython=False, parallel=False, fastmath=True, cache=True)
 # def numba_random_choice(K, N, p, DUM=1):
-#     Cij = np.zeros((N, N), dtype=np.float32)
+#     Cij = np.zeros((N, N), dtype=np.float64)
 
 #     if DUM==0:
 #         id_pattern = np.random.choice(N, np.int64(K/2.0), replace=False)
@@ -59,7 +59,7 @@ def numba_sample_proba(p, size):
 @jit(nopython=False, parallel=False, fastmath=True, cache=True)
 def numba_random_choice(K, N, p, DUM=1):
 
-    Cij = np.zeros((N, N), dtype=np.float32)
+    Cij = np.zeros((N, N), dtype=np.float64)
 
     for i in range(N):
         if DUM==0:
@@ -76,7 +76,7 @@ def numba_random_choice(K, N, p, DUM=1):
 @jit(nopython=False, parallel=False, fastmath=True, cache=True)
 def numba_reciprocal_fixed(K, N, p, Pij):
 
-    Cij = np.zeros((N, N), dtype=np.float32)
+    Cij = np.zeros((N, N), dtype=np.float64)
     idx = np.arange(N)
 
     if p>0:
@@ -106,7 +106,7 @@ def numba_reciprocal(K, N, p, Pij):
     """""
     Based on Rao's code
     """""
-    Cij = np.zeros((N, N), dtype=np.float32)
+    Cij = np.zeros((N, N), dtype=np.float64)
 
     for j in range(N):
         for i in range(j):
@@ -261,7 +261,7 @@ def numba_update_Cij(Cij, rates, ALPHA=1, ETA_DT=0.01):
 def theta_mat(theta, phi):
     theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
 
-    twopi = np.float32(2.0 * np.pi)
+    twopi = np.float64(2.0 * np.pi)
 
     for i in range(phi.shape[0]):
         for j in range(theta.shape[0]):
@@ -289,8 +289,8 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
 
     # np.random.seed(SEED)
     
-    Pij = np.zeros((Na, Nb), dtype=np.float32)
-    Cij = np.zeros((Na, Nb), dtype=np.float32)
+    Pij = np.zeros((Na, Nb), dtype=np.float64)
+    Cij = np.zeros((Na, Nb), dtype=np.float64)
 
     print('random connectivity')
     if STRUCTURE != 'None':
@@ -302,8 +302,8 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         #     theta = np.random.permutation(theta) - np.pi
         #     # phi = np.random.permutation(phi)
         
-        theta = theta.astype(np.float32)
-        phi = phi.astype(np.float32)
+        theta = theta.astype(np.float64)
+        phi = phi.astype(np.float64)
 
         theta_ij = theta_mat(theta, phi)
         if 'lateral' in STRUCTURE:
@@ -324,7 +324,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
 
     if "ring" in STRUCTURE:
         print('with strong cosine structure')
-        Pij[:, :] = Pij * np.float32(KAPPA)
+        Pij[:, :] = Pij * np.float64(KAPPA)
 
     elif "spec_cos" in STRUCTURE:
         print('with spec cosine structure')
@@ -340,11 +340,11 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
             Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA) / Nb
             if SIGMA>0.0:
                 Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
-                
-            # Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
+
+            Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
 
         elif "spec" in STRUCTURE: # 1/N + 1/sqrtN cos
-            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA * np.sqrt(Nb)) / Nb
+            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA / np.sqrt(Nb)) / Nb
             if SIGMA>0.0:
                 Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
             
