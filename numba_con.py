@@ -341,7 +341,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
             if SIGMA>0.0:
                 Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
 
-            Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
+            # Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
 
         elif "spec" in STRUCTURE: # 1/N + 1/sqrtN cos
             Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA / np.sqrt(Nb)) / Nb

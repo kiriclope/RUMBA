@@ -477,7 +477,7 @@ class Network:
         if self.IF_STP:
             # Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
             # Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
-            Cij_stp = Cij[:self.Na[0],:self.Na[0]].copy()
+            # Cij_stp = Cij[:self.Na[0],:self.Na[0]].copy()
             stp = STP_Model(self.Na[0], self.DT)
             print('stp:', stp.USE, stp.TAU_REC, stp.TAU_FAC)
 
@@ -511,14 +511,14 @@ class Network:
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
 
+            # self.update_rates()
+            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA)
+
             if self.IF_STP:
                 # stp.markram_stp(self.rates[:self.Na[0]].copy())
                 stp.hansel_stp(self.rates[:self.Na[0]].copy())
                 # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
-                self.inputs[0][:self.Na[0]] = stp.A_u_x_stp * self.inputs[0][:self.Na[0]].copy()
-
-            # self.update_rates()
-            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA)
+                self.inputs[0,:self.Na[0]] = stp.A_u_x_stp * self.inputs[0,:self.Na[0]].copy()
 
             if step < self.N_STEADY:
                 self.mean_rates = self.mean_rates + self.rates
@@ -591,6 +591,12 @@ class Network:
 
                     running_step = 0
 
+            # if self.IF_STP:
+            #     # stp.markram_stp(self.rates[:self.Na[0]].copy())
+            #     stp.hansel_stp(self.rates[:self.Na[0]].copy())
+            #     # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
+            #     self.inputs[0][:self.Na[0]] = stp.A_u_x_stp * self.inputs[0][:self.Na[0]].copy()
+
         self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
@@ -608,26 +614,26 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    # config = safe_load(open("./config_itskov.yml", "r"))
-    # model = Network(**config)
-
-    # start = perf_counter()
-    # model.run()
-    # end = perf_counter()
-
-    # print("Elapsed (with compilation) = {}s".format((end - start)))
-
     config = safe_load(open("./config_itskov.yml", "r"))
+    model = Network(**config)
+
     start = perf_counter()
-    name = config['FILE_NAME']
-
-    for i_simul in range(10):
-        config['FILE_NAME'] = name + "_%d" % (i_simul)
-        model = Network(**config)
-        model.run()
-
+    model.run()
     end = perf_counter()
+
     print("Elapsed (with compilation) = {}s".format((end - start)))
+
+    # config = safe_load(open("./config_itskov.yml", "r"))
+    # start = perf_counter()
+    # name = config['FILE_NAME']
+
+    # for i_simul in range(10):
+    #     config['FILE_NAME'] = name + "_%d" % (i_simul)
+    #     model = Network(**config)
+    #     model.run()
+
+    # end = perf_counter()
+    # print("Elapsed (with compilation) = {}s".format((end - start)))
 
     # config = safe_load(open("./config.yml", "r"))
 

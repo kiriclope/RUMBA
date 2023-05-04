@@ -187,11 +187,13 @@ def spatial_profile(df, window=10, n=250, IF_NORM=0):
     mean_df = df1.groupby('neurons').mean()
     array = mean_df[['rates']].to_numpy()
 
-    m1, phase = decode_bump(array)
+    # m1, phase = decode_bump(array)
 
     smooth = circcvl(array[:, 0], windowSize=n)
+    m1, phase = decode_bump(smooth)
+
     print(smooth.shape)
-    smooth = np.roll(smooth, int((phase[-1]/np.pi - 0.5 ) * smooth.shape[0]))
+    smooth = np.roll(smooth, int((phase/ 2.0 / np.pi - 0.5 ) * smooth.shape[0]))
 
     if IF_NORM:
         smooth /= np.mean(array)

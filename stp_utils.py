@@ -7,8 +7,8 @@ class STP_Model():
     def __init__(self, N, DT):
 
         self.USE = 0.05
-        self.TAU_REC = 0.1
-        self.TAU_FAC = 1.0
+        self.TAU_REC = 0.2
+        self.TAU_FAC = 0.75
         
         self.u_stp = np.ones(N).astype(np.float64) * self.USE
         self.x_stp = np.ones(N).astype(np.float64)
