@@ -2,9 +2,9 @@ verbose: 0
 SAVE: 1
 
 DT: 0.001
-DURATION: 30.0
+DURATION: 2.0
 
-T_STEADY: 5.0
+T_STEADY: 1.0
 T_WINDOW: .1
 
 T_STIM_ON: 6.0
@@ -44,15 +44,15 @@ TAU_MEM: [.02, .01]
 
 GAIN: 1.0
 Jab: [1.0, -2.0, 1.0, -1.0]
-Iext: [25.0, 15.0]
+Iext: [25.0, 5.0]
 # Iext: [25, 15.0]
-M0: 1.5
+M0: 1.0
 
 IF_LEARNING: 0
 IF_STP: 1
 
 SEED: None
-STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos']
+STRUCTURE: ['all_cos', 'all_cos_lateral', 'all_cos', 'all_cos_lateral']
 SIGMA: [0.0, 0.0, 0.0, 0.0]
 KAPPA: [0.5, 0.5, 0.5, 0.5]
 PHASE: 0.0

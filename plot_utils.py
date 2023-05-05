@@ -331,3 +331,135 @@ def line_phases(filename, config):
     plt.yticks([-180, -90, 0, 90, 180])
     plt.xlabel('Time (a.u.)')
     plt.ylabel('Phase (°)')
+
+def J0_J1_space(filename):
+
+    name = filename
+
+    m0_list = []
+    m1_list = []
+
+    for Jab in range(1, 11):
+        for kappa in np.linspace(0, 1, 11):
+            # m0_list.append(Jab)
+            # m1_list.append(kappa)
+
+            file_name = name + "_Jab_%.2f_kappa_%.2f" % (Jab, kappa)
+            df, df_E, df_I = get_df(file_name, 'config_' + name + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+
+            rates = np.nanmean(array, 0)
+            m1, phase = decode_bump(rates)
+
+            m0_list.append(np.nanmean(rates))
+            m1_list.append(m1)
+
+    width=7
+    fig, ax = plt.subplots(1, 2, figsize=[2*width, width * golden_ratio])
+    plt.tight_layout()
+
+    m0_list = np.array(m0_list).reshape(10, 11)
+    m1_list = np.array(m1_list).reshape(10, 11)
+
+    ax[0].imshow(m0_list, cmap='jet', vmin=0, vmax=10, aspect='auto', extent=[1, 10, 0, 1], origin='lower')
+    ax[0].set_xlabel('Jab')
+    ax[0].set_ylabel('$\kappa$')
+
+    ax[1].imshow(m1_list/m0_list, cmap='jet', vmin=0, vmax=2, aspect='auto', extent=[1, 10, 0, 1], origin='lower')
+    ax[1].set_xlabel('Jab')
+    ax[1].set_ylabel('$\kappa$')
+
+    return m0_list, m1_list
+
+
+def I0_S0_space(filename):
+
+    name = filename
+
+    m0_list = []
+    m1_list = []
+
+    for Iext in np.linspace(1, 20, 10):
+        for var_ff in np.linspace(0, 100, 10):
+            for id in range(1):
+                file_name = name + "_I0_%.2f_S0_%.2f_id_%d" % (Iext, var_ff, id)
+                df, df_E, df_I = get_df(file_name, 'config_' + name + '.yml')
+
+                times = df_E.time.unique()
+                n_times = len(times)
+                n_neurons = len(df_E.neurons.unique())
+
+                array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+
+                rates = np.nanmean(array, 0)
+                m1, phase = decode_bump(rates)
+
+                m0_list.append(np.nanmean(rates))
+                m1_list.append(m1)
+
+    width=7
+    fig, ax = plt.subplots(1, 2, figsize=[2*width, width * golden_ratio])
+    plt.tight_layout()
+
+    m0_list = np.array(m0_list).reshape(10, 10)
+    m1_list = np.array(m1_list).reshape(10, 10)
+
+    ax[0].imshow(m0_list, cmap='jet', vmin=0, vmax=10, aspect='auto', extent=[0, 100, 1, 20], origin='lower')
+    ax[0].set_ylabel('$I_0$')
+    ax[0].set_xlabel('$\sigma_0$')
+
+    ax[1].imshow((m1_list/m0_list), cmap='jet', vmin=0, vmax=2, aspect='auto', extent=[0, 100, 1, 20], origin='lower')
+    ax[1].set_ylabel('$I_0$')
+    ax[1].set_xlabel('$\sigma_0$')
+
+    return m0_list, m1_list
+
+def I0_J0_space(filename):
+
+    name = filename
+
+    m0_list = []
+    m1_list = []
+
+
+    for I0 in np.arange(0, 22, 2):
+        for J0 in np.arange(0, 22, 2):
+
+            file_name = name + "_I0_%.2f_J0_%.2f" % (I0, J0)
+            df, df_E, df_I = get_df(file_name, 'config_' + name + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+
+            # rates = np.nanmean(array, 0)
+            rates = array[-1]
+
+            m1, phase = decode_bump(rates)
+
+            m0_list.append(np.nanmean(rates))
+            m1_list.append(m1)
+
+    width=7
+    fig, ax = plt.subplots(1, 2, figsize=[2*width, width * golden_ratio])
+    plt.tight_layout()
+
+    m0_list = np.array(m0_list).reshape(11, 11)
+    m1_list = np.array(m1_list).reshape(11, 11)
+
+    ax[0].imshow(m0_list, cmap='jet', vmin=0, vmax=10, aspect='auto', extent=[0, 20, 0, 20], origin='lower')
+    ax[0].set_ylabel('$I_0$')
+    ax[0].set_xlabel('$J_0$')
+
+    ax[1].imshow((m1_list), cmap='jet', vmin=0, vmax=10, aspect='auto', extent=[0, 20, 0, 20], origin='lower')
+    ax[1].set_ylabel('$I_0$')
+    ax[1].set_xlabel('$J_0$')
+
+    return m0_list, m1_list
