@@ -14,8 +14,8 @@ from stp_utils import STP_Model, numba_markram_stp
 
 
 class Bunch(object):
-  def __init__(self, adict):
-      self.__dict__.update(adict)
+    def __init__(self, adict):
+        self.__dict__.update(adict)
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
@@ -78,8 +78,8 @@ def TF(x, thresh=None, tfname='TL', tfgain=1):
     # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float64)
     # else:
 
-    return x * (x > thresh)
-    # return x * (x > 0) * (x <= thresh)  + thresh * (x >= thresh)
+    # return x * (x > thresh)
+    return x * (x > 0) * (x <= thresh)  + thresh * (x >= thresh)
 
     # elif tfname=='Sig':
     # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
