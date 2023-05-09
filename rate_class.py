@@ -131,14 +131,16 @@ def numba_update_rates(rates, inputs, ff_inputs, inputs_NMDA, thresh, TF_NAME, T
             net_inputs = net_inputs + inputs_NMDA[i_pop]
 
     if RATE_DYN == 0:
-        rates = TF(net_inputs, thresh, TF_NAME, 1)
+        rates = TF(net_inputs, thresh, TF_NAME, TF_GAIN)
     else:
         for i_pop in range(inputs.shape[0]):
             rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] * EXP_DT_TAU_MEM[i_pop]
             # rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] + net_inputs[csumNa[i_pop]:csumNa[i_pop+1]] * (net_inputs[csumNa[i_pop]:csumNa[i_pop+1]] > 0) * DT_TAU_MEM[i_pop]
-            rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] + DT_TAU_MEM[i_pop] * TF(net_inputs[csumNa[i_pop]:csumNa[i_pop+1]],
-                                                                                                                 thresh[csumNa[i_pop]:csumNa[i_pop+1]],
-                                                                                                                 TF_NAME, TF_GAIN)
+            rates[csumNa[i_pop]:csumNa[i_pop+1]] = (rates[csumNa[i_pop]:csumNa[i_pop+1]]
+                                                    + DT_TAU_MEM[i_pop]
+                                                    * TF(net_inputs[csumNa[i_pop]:csumNa[i_pop+1]],
+                                                         thresh[csumNa[i_pop]:csumNa[i_pop+1]],
+                                                         TF_NAME, TF_GAIN))
 
     if RATE_NOISE:
         rates = rates[:] + np.sqrt(RATE_VAR) * np.random.normal(0, 1.0, rates.shape[0])

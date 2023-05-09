@@ -47,7 +47,7 @@ RATE_VAR: 0.0
 
 GAIN: 1.0
 
-FILE_NAME: broad_on
+FILE_NAME: broad
 Jab: [-3.0]
 # Iext: [30.0]
 Iext: [45.0]

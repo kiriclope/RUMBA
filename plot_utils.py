@@ -31,7 +31,7 @@ def get_df(filename, configname='config.yml'):
     for i_pop in range(const.N_POP):
         Na.append(int(const.N * const.frac[i_pop]))
 
-    print(Na)
+    # print(Na)
     df = pd.read_hdf('./simul/' + filename + '.h5', mode='r')
 
     df_E = df[df.neurons<Na[0]]
@@ -331,22 +331,52 @@ def bump_diff(filename, config):
 
     for i_simul in range(250):
 
-        df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
+        try:
+            df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
 
-        times = df_E.time.unique()
-        n_times = len(times)
-        n_neurons = len(df_E.neurons.unique())
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
           
-        array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-        m1, phase = decode_bump(array[-1])
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
         
-        phase = phase * 180.0 / np.pi - 180.0
-        phase_list.append(phase)
-
-        # plt.plot(times, phase, alpha=.25)
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
     plt.hist(phase_list, histtype='step', bins='auto', density=True)
+
+    plt.ylabel('Density')
+    plt.xlabel('Phase (°)')
+
+def bump_diff_time(filename, config):
+
+    name = filename
+
+    phase_list = []
+
+    for i_simul in range(25):
+
+        try:
+            df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array)
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            phase_list.append(np.nan)
+
+    phase_list = np.array(phase_list)
+    plt.plot(times, phase_list.T, alpha=.25)
 
     plt.ylabel('Density')
     plt.xlabel('Phase (°)')
@@ -496,37 +526,39 @@ def bump_gain(filename, config):
         phase_list = []
         m1_list = []
 
-        for i_simul in range(20):
+        for i_simul in range(250):
+            try :
+                df, df_E, df_I = get_df( name + "_gain_%.2f_id_%d" % (gain, i_simul), config + '.yml')
 
-            df, df_E, df_I = get_df( name + "_gain_%.2f_id_%d" % (gain, i_simul), config + '.yml')
+                times = df_E.time.unique()
+                n_times = len(times)
+                n_neurons = len(df_E.neurons.unique())
 
-            times = df_E.time.unique()
-            n_times = len(times)
-            n_neurons = len(df_E.neurons.unique())
+                array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+                m1, phase = decode_bump(array[-1])
 
-            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-            m1, phase = decode_bump(array[-1])
+                phase = phase * 180.0 / np.pi - 180.0
+                m1 = m1 / np.nanmean(array[-1])
 
-            phase = phase * 180.0 / np.pi - 180.0
-            m1 = m1 / np.nanmean(array[-1])
-
-            phase_list.append(phase)
-            m1_list.append(m1)
+                phase_list.append(phase)
+                m1_list.append(m1)
+            except:
+                phase_list.append(np.nan)
+                m1_list.append(np.nan)
 
         var_list.append(np.nanstd(phase_list))
         M1_list.append(np.nanmean(m1_list))
 
-
     var_list = np.array(var_list)
 
-    plt.figure()
+    plt.figure('diff_gain')
     plt.plot(gain_list, var_list)
     plt.ylabel('Diffusion (°)')
     plt.xlabel('Gain (a.u.)')
 
     M1_list = np.array(M1_list)
 
-    plt.figure()
+    plt.figure('m1_gain')
     plt.plot(gain_list, M1_list)
     plt.ylabel('Rel. Bump Amplitude (Hz)')
     plt.xlabel('Gain (a.u.)')
