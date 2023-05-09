@@ -537,7 +537,7 @@ def bump_gain(filename, config):
                 array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
                 m1, phase = decode_bump(array[-1])
 
-                phase = phase * 180.0 / np.pi - 180.0
+                phase = phase * 180.0 / np.pi
                 m1 = m1 / np.nanmean(array[-1])
 
                 phase_list.append(phase)

@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
         config['TF_GAIN'] = gain
 
-        for i_simul in range(20, 250):
+        for i_simul in range(250):
 
             config['FILE_NAME'] = name + "_gain_%.2f_id_%d" % (gain, i_simul)
             model = Network(**config)
