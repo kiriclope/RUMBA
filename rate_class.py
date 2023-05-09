@@ -79,7 +79,7 @@ def TF(x, thresh=None, tfname='TL', tfgain=1):
     # else:
 
     # return x * (x > thresh)
-    return x * (x > 0) * (x <= thresh)  + thresh * (x >= thresh)
+    return x * (x > 0) * (x <= thresh)  + tfgain * (x >= thresh)
 
     # elif tfname=='Sig':
     # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
@@ -116,7 +116,7 @@ def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_update_rates(rates, inputs, ff_inputs, inputs_NMDA, thresh, TF_NAME, csumNa, EXP_DT_TAU_MEM, DT_TAU_MEM, RATE_DYN=0, IF_NMDA=0, RATE_NOISE=0, RATE_VAR=0.0):
+def numba_update_rates(rates, inputs, ff_inputs, inputs_NMDA, thresh, TF_NAME, TF_GAIN, csumNa, EXP_DT_TAU_MEM, DT_TAU_MEM, RATE_DYN=0, IF_NMDA=0, RATE_NOISE=0, RATE_VAR=0.0):
 
     net_inputs = ff_inputs
 
@@ -133,7 +133,9 @@ def numba_update_rates(rates, inputs, ff_inputs, inputs_NMDA, thresh, TF_NAME, c
         for i_pop in range(inputs.shape[0]):
             rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] * EXP_DT_TAU_MEM[i_pop]
             # rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] + net_inputs[csumNa[i_pop]:csumNa[i_pop+1]] * (net_inputs[csumNa[i_pop]:csumNa[i_pop+1]] > 0) * DT_TAU_MEM[i_pop]
-            rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] + DT_TAU_MEM[i_pop] * TF(net_inputs[csumNa[i_pop]:csumNa[i_pop+1]], thresh[csumNa[i_pop]:csumNa[i_pop+1]], TF_NAME,1)
+            rates[csumNa[i_pop]:csumNa[i_pop+1]] = rates[csumNa[i_pop]:csumNa[i_pop+1]] + DT_TAU_MEM[i_pop] * TF(net_inputs[csumNa[i_pop]:csumNa[i_pop+1]],
+                                                                                                                 thresh[csumNa[i_pop]:csumNa[i_pop+1]],
+                                                                                                                 TF_NAME, TF_GAIN)
 
     if RATE_NOISE:
         rates = rates[:] + np.sqrt(RATE_VAR) * np.random.normal(0, 1.0, rates.shape[0])
@@ -521,7 +523,7 @@ class Network:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
 
             # self.update_rates()
-            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA, RATE_NOISE=self.RATE_NOISE, RATE_VAR=self.RATE_VAR)
+            self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.TF_GAIN, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA, RATE_NOISE=self.RATE_NOISE, RATE_VAR=self.RATE_VAR)
 
             if self.IF_STP:
                 # stp.markram_stp(self.rates[:self.Na[0]].copy())

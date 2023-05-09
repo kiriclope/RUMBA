@@ -45,9 +45,9 @@ RATE_NOISE: 0
 RATE_VAR: 0.0
 
 GAIN: 0.5
-Jab: [-5.0]
-Iext: [40.0]
-# Iext: [50.0]
+Jab: [-6.0]
+Iext: [45.0]
+# Iext: [30.0]
 M0: 1.0
 
 IF_LEARNING: 0
