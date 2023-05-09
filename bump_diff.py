@@ -11,7 +11,7 @@ if __name__ == "__main__":
     start = perf_counter()
     name = config['FILE_NAME']
 
-    for i_simul in range(200, 300):
+    for i_simul in range(0, 250):
         config['FILE_NAME'] = name + "_%d" % (i_simul)
         model = Network(**config)
         model.run()

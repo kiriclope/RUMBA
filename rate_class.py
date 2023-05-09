@@ -21,7 +21,8 @@ class Bunch(object):
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def pertur_func(theta, I0, SIGMA0, PHI0, TYPE='cos'):
     if TYPE=='cos':
-        return I0 * (1.0 + SIGMA0 * np.cos(theta - PHI0) )
+        res = I0 * (1.0 + SIGMA0 * np.cos(theta - PHI0) )
+        return res * (res > 0)
     else:
         return I0 * gaussian(theta - PHI0, SIGMA0)
 
@@ -72,14 +73,16 @@ def numba_erf(x):
     return res
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def TF(x, thresh=None, tfname='TL', tfgain=1):
+def TF(x, thresh=None, tfname='TL', tfgain=0.5):
     # if tfname=='NL':
     # return 1.0 * (x >= 1.0) * np.sqrt(np.abs(4.0 * x - 3.0)) + x * x * (x > 0)
     # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float64)
     # else:
 
     # return x * (x > thresh)
-    return x * (x > 0) * (x <= thresh)  + tfgain * (x >= thresh)
+    return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
+
+    # return thresh / (1.0 + np.exp(-tfgain * (x+4)))
 
     # elif tfname=='Sig':
     # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
@@ -177,12 +180,15 @@ class Network:
         self.N_STIM_ON = int(const.T_STIM_ON / self.DT)
         self.N_STIM_OFF = int(const.T_STIM_OFF / self.DT)
 
+        self.N_CUE_ON = int((const.T_STIM_ON + 1.5) / self.DT)
+        self.N_CUE_OFF = int((const.T_STIM_OFF + 1.5) / self.DT)
+
         # PARAMETERS
         self.N_POP = int(const.N_POP)
         self.N = int(const.N)
         self.K = const.K
 
-        self.ones_vec = np.ones((self.N,), dtype=np.float64) / self.N_STEPS
+        self.ones_vec = np.ones((self.N,), dtype=np.float64) / self.N_STEPS * self.DURATION
 
         self.TAU_SYN = const.TAU_SYN
         self.TAU_FF = const.TAU_FF
@@ -297,10 +303,15 @@ class Network:
         self.I0 = np.array(const.I0, dtype=np.float64)
         self.I0 *= self.M0 # * np.sqrt(self.Ka[0])
 
+        self.I1 = np.array(const.I1, dtype=np.float64)
+        self.I1 *= self.M0 # * np.sqrt(self.Ka[0])
+
         if const.PHI0 == 'None':
             self.PHI0 = np.random.uniform(2*np.pi)
         else:
             self.PHI0 = const.PHI0 * np.pi / 180.
+
+        self.PHI1 = self.PHI0 - const.DPHI * np.pi
 
         self.SIGMA0 = const.SIGMA0
         self.SIGMA_EXT = const.SIGMA_EXT
@@ -430,25 +441,40 @@ class Network:
 
     def perturb_inputs(self, step):
 
-        # if step==0:
-        #     self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
-        
+        if step==0:
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
+
         if step==self.N_STIM_ON:
-            # self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = self.Iext[0] / np.sqrt(self.Ka[0])
-            for i_pop in range(self.N_POP):
-                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.Iext[i_pop]
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[1]] = self.Iext[0]
+            # for i_pop in range(self.N_POP):
+            #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = 1.1 * self.Iext[i_pop]
 
         if step == self.N_STIM_ON:
-            print('CUE ON')
+            print('STIM ON')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
 
         if step == self.N_STIM_OFF:
-            print('CUE OFF')
+            print('STIM OFF')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
+
+        if step==self.N_STIM_OFF:
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[1]] = self.Iext[0]
+
+        if step == self.N_CUE_ON:
+            print('CUE ON')
+            for i_pop in range(self.N_POP):
+                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I1[i_pop], self.SIGMA0, self.PHI1, TYPE=self.PERT_TYPE)
+
+        if step == self.N_CUE_OFF:
+            print('CUE OFF')
+            for i_pop in range(self.N_POP):
+                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
+                self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I1[i_pop], self.SIGMA0, self.PHI1, TYPE=self.PERT_TYPE)
 
     def generate_Cij(self):
         Cij = np.zeros((self.N, self.N), dtype=np.float64)
@@ -556,7 +582,7 @@ class Network:
             running_step += 1
 
             if step >= self.N_STEADY:
-                time = step * self.ones_vec
+                time = (step-self.N_STEADY) * self.ones_vec
 
                 if running_step >= self.N_WINDOW:
                     amplitudes = []
@@ -615,7 +641,7 @@ class Network:
 
         if self.SAVE:
             print('saving data to', self.FILE_NAME + '.h5')
-            store = HDFStore(self.FILE_NAME + '.h5', 'w')
+            store = HDFStore('./simul/' + self.FILE_NAME + '.h5', 'w')
             store.append('data', self.df, format='table', data_columns=True)
             store.close()
 

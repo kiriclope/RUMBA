@@ -32,7 +32,7 @@ def get_df(filename, configname='config.yml'):
         Na.append(int(const.N * const.frac[i_pop]))
 
     print(Na)
-    df = pd.read_hdf(filename + '.h5', mode='r')
+    df = pd.read_hdf('./simul/' + filename + '.h5', mode='r')
 
     df_E = df[df.neurons<Na[0]]
     df_EE = []
@@ -177,10 +177,20 @@ def heatmap(df, vmax=20):
     # xticks = np.linspace(0, len(df1.time), n_ticks)
     # yticks = np.linspace(0, len(df1.neurons), n_ticks)
 
+    # width=7
+    # fig, ax = plt.subplots(2, 1, figsize=[1.5*width, width * golden_ratio],
+    #                        gridspec_kw={'height_ratios': [1, 3]})
+    # plt.tight_layout()
+
+    # ax[0].fill_between([2/6.0, 2.5/6.0], y1=0, y2=1, alpha=.2)
+    # ax[0].set_xticks([])
+    # ax[0].set_yticks([])
+
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
 
-def spatial_profile(df, window=10, n=250, IF_NORM=0):
+
+def spatial_profile(df, window=[0, 1], n=250, IF_NORM=0):
     df1 = df[df.time < window[1]]
     df1 = df1[df1.time >= window[0]]
 
@@ -189,18 +199,25 @@ def spatial_profile(df, window=10, n=250, IF_NORM=0):
 
     # m1, phase = decode_bump(array)
 
+    fig = plt.figure('spatial_profile')
+
     smooth = circcvl(array[:, 0], windowSize=n)
     m1, phase = decode_bump(smooth)
 
     print(smooth.shape)
-    smooth = np.roll(smooth, int((phase/ 2.0 / np.pi - 0.5 ) * smooth.shape[0]))
+    smooth = np.roll(smooth, int((phase / 2.0 / np.pi - 0.5 ) * smooth.shape[0]))
 
     if IF_NORM:
         smooth /= np.mean(array)
 
-    plt.plot(smooth)
-    plt.xlabel('Neuron #')
+    theta = np.linspace(-180, 180, smooth.shape[0])
+
+    plt.plot(theta, smooth)
+    plt.xlabel('Prefered Location (°)')
     plt.ylabel('Rate (Hz)')
+
+    plt.xticks([-180, -90, 0, 90, 180])
+
 
 def spatial_profile_stp(df, window=[0,1], n=10):
     df1 = df[df.time < window[1]]
@@ -295,42 +312,44 @@ def line_phase(df):
     ax[2].set_xlabel('Time (ms)')
     ax[2].set_ylabel('Phase (°)')
 
-def line_phases(filename, config):
+    ax[0].fill_between([1.0, 1.5], y1=0, y2=15, alpha=.2)
+    ax[1].fill_between([1.0, 1.5], y1=0, y2=10, alpha=.2)
+    ax[2].fill_between([1.0, 1.5], y1=180, y2=-180, alpha=.2)
+
+    ax[0].fill_between([2.5, 3.0], y1=0, y2=15, alpha=.2)
+    ax[1].fill_between([2.5, 3.0], y1=0, y2=10, alpha=.2)
+    ax[2].fill_between([2.5, 3.0], y1=180, y2=-180, alpha=.2)
+
+    ax[2].hlines(0, 0, 2.5, color='k', ls='--')
+    ax[2].hlines(-(180-.25*180-180), 2.5, 6, color='k', ls='--')
+
+def bump_diff(filename, config):
 
     name = filename
 
-    for i_simul in range(10):
+    phase_list = []
 
-        df, df_E, df_I = get_df(name + "_%d_1.0" % (i_simul), config + '.yml')
+    for i_simul in range(250):
+
+        df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
 
         times = df_E.time.unique()
         n_times = len(times)
         n_neurons = len(df_E.neurons.unique())
           
         array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-        m1, phase = decode_bump(array)
+        m1, phase = decode_bump(array[-1])
         
         phase = phase * 180.0 / np.pi - 180.0
-        plt.plot(times, phase, alpha=.25)
-    
-    # for i_phase in range(0,1):
-    #    for i_simul in range(10):
+        phase_list.append(phase)
 
-    #       df, df_E, df_I = get_df(name + "_%d_%d_1.0" % (i_simul, i_phase), config + '.yml')
+        # plt.plot(times, phase, alpha=.25)
 
-    #       times = df_E.time.unique()
-    #       n_times = len(times)
-    #       n_neurons = len(df_E.neurons.unique())
-          
-    #       array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-    #       m1, phase = decode_bump(array)
+    phase_list = np.array(phase_list)
+    plt.hist(phase_list, histtype='step', bins='auto', density=True)
 
-    #       phase = phase * 180.0 / np.pi - 180.0
-    #       plt.plot(times, phase, alpha=.25)
-
-    plt.yticks([-180, -90, 0, 90, 180])
-    plt.xlabel('Time (a.u.)')
-    plt.ylabel('Phase (°)')
+    plt.ylabel('Density')
+    plt.xlabel('Phase (°)')
 
 def J0_J1_space(filename):
 

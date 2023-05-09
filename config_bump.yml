@@ -2,23 +2,24 @@ verbose: 0
 SAVE: 1
 
 DT: 0.001
-DURATION: 2.0
+DURATION: 6.0
 
 T_STEADY: 1.0
 T_WINDOW: .05
 
-T_STIM_ON: 6.0
-T_STIM_OFF: 8.0
-I0: [5.0, 0.]
+T_STIM_ON: 2.0
+T_STIM_OFF: 2.5
+I0: [1.0, 0.]
+I1: [0.0, 0.]
 PHI0: 180.0
 SIGMA0: 1.0
+DPHI: 0.25
 
 SIGMA_EXT: 1.0
 PERT_TYPE: 'cos'
 
-FILE_NAME: bump
 TF_NAME: TL
-TF_GAIN: 1
+TF_GAIN: 0.5
 
 N_POP: 1
 N: 1000
@@ -33,10 +34,10 @@ TAU_NMDA: [20.]
 
 FF_DYN: 2
 TAU_FF: [4.]
-VAR_FF: [10.0]
+VAR_FF: [30.0]
 
 THRESH_DYN: 0
-THRESH: [18.0]
+THRESH: [15.0]
 TAU_THRESH: [0.08]
 
 RATE_DYN: 1
@@ -44,10 +45,18 @@ TAU_MEM: [.020]
 RATE_NOISE: 0
 RATE_VAR: 0.0
 
-GAIN: 0.5
-Jab: [-6.0]
-Iext: [45.0]
+GAIN: 1.0
+
+FILE_NAME: broad_on
+Jab: [-3.0]
 # Iext: [30.0]
+Iext: [45.0]
+
+# FILE_NAME: narrow_on
+# Jab: [-6.0]
+# # Iext: [30.0]
+# Iext: [55.0]
+
 M0: 1.0
 
 IF_LEARNING: 0
