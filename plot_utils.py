@@ -482,3 +482,51 @@ def I0_J0_space(filename):
     ax[1].set_xlabel('$J_0$')
 
     return m0_list, m1_list
+
+def bump_gain(filename, config):
+
+    name = filename
+
+    var_list = []
+    gain_list = [.25, .5, .75, 1.0, 1.25, 1.5, 1.75]
+    M1_list = []
+
+    for gain in gain_list:
+
+        phase_list = []
+        m1_list = []
+
+        for i_simul in range(20):
+
+            df, df_E, df_I = get_df( name + "_gain_%.2f_id_%d" % (gain, i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            phase = phase * 180.0 / np.pi - 180.0
+            m1 = m1 / np.nanmean(array[-1])
+
+            phase_list.append(phase)
+            m1_list.append(m1)
+
+        var_list.append(np.nanstd(phase_list))
+        M1_list.append(np.nanmean(m1_list))
+
+
+    var_list = np.array(var_list)
+
+    plt.figure()
+    plt.plot(gain_list, var_list)
+    plt.ylabel('Diffusion (°)')
+    plt.xlabel('Gain (a.u.)')
+
+    M1_list = np.array(M1_list)
+
+    plt.figure()
+    plt.plot(gain_list, M1_list)
+    plt.ylabel('Rel. Bump Amplitude (Hz)')
+    plt.xlabel('Gain (a.u.)')
