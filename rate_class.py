@@ -80,12 +80,12 @@ def TF(x, thresh=None, tfname='TL', tfgain=0.5):
     # else:
 
     # return x * (x > thresh)
-    return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
+    # return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
 
-    # return thresh / (1.0 + np.exp(-tfgain * (x+4)))
+    # return thresh / (1.0 + np.exp(-tfgain *(x-6.0))) * (x>0)
 
     # elif tfname=='Sig':
-    # return (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
+    return thresh * (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
     # elif tfname=='LIF':
     # return (- 1.0 * (x > 1.0) / np.log(1.0 - 1.0 / x)).astype(np.float64)
 
@@ -443,8 +443,8 @@ class Network:
 
     def perturb_inputs(self, step):
 
-        if step==0:
-            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
+        # if step==0:
+        #     self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
 
         if step==self.N_STIM_ON:
             self.ff_inputs_0[self.csumNa[0]:self.csumNa[1]] = self.Iext[0]

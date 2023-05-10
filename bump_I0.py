@@ -11,10 +11,15 @@ if __name__ == "__main__":
     start = perf_counter()
     name = config['FILE_NAME']
 
-    for i_simul in range(0, 100):
-        config['FILE_NAME'] = name + "_%d" % (i_simul)
-        model = Network(**config)
-        model.run()
+    for I0 in np.arange(12, 32, 2):
+
+        config['Iext'] = [I0]
+
+        for i_simul in range(100, 250):
+
+            config['FILE_NAME'] = name + "_I0_%.2f_id_%d" % (I0, i_simul)
+            model = Network(**config)
+            model.run()
 
     end = perf_counter()
     print("Elapsed (with compilation) = {}s".format((end - start)))

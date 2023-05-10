@@ -2,13 +2,13 @@ verbose: 0
 SAVE: 1
 
 DT: 0.001
-DURATION: 6.0
+DURATION: 3.5
 
 T_STEADY: 1.0
 T_WINDOW: .05
 
-T_STIM_ON: 2.0
-T_STIM_OFF: 2.5
+T_STIM_ON: 1.0
+T_STIM_OFF: 1.5
 I0: [1.0, 0.]
 I1: [0.0, 0.]
 PHI0: 180.0
@@ -19,7 +19,7 @@ SIGMA_EXT: 1.0
 PERT_TYPE: 'cos'
 
 TF_NAME: TL
-TF_GAIN: 0.5
+TF_GAIN: 1.0
 
 N_POP: 1
 N: 1000
@@ -47,10 +47,18 @@ RATE_VAR: 0.0
 
 GAIN: 1.0
 
-FILE_NAME: broad
-Jab: [-3.0]
-Iext: [30.0]
-# Iext: [45.0]
+FILE_NAME: sig
+THRESH: [15.0]
+Jab: [-2.5]
+Iext: [20.0]
+Iext: [26.0]
+
+# FILE_NAME: broad
+# THRESH: [15.0]
+# TF_GAIN: 0.5
+# Jab: [-3.0]
+# Iext: [30.0]
+# # Iext: [45.0]
 
 # FILE_NAME: narrow_on
 # Jab: [-6.0]

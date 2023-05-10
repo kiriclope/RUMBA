@@ -11,7 +11,8 @@ if __name__ == "__main__":
     start = perf_counter()
     name = config['FILE_NAME']
 
-    for gain in [.25, .5, .75, 1.0, 1.25, 1.5, 1.75]:
+    # for gain in [.25, .5, .75, 1.0, 1.25, 1.5, 1.75]:
+    for gain in [.25, .375, .625, .875, 1.0, 1.125, 1.25]:
 
         config['TF_GAIN'] = gain
 
