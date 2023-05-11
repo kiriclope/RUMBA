@@ -47,11 +47,11 @@ RATE_VAR: 0.0
 
 GAIN: 1.0
 
-FILE_NAME: sig
+FILE_NAME: sig2
 THRESH: [15.0]
-Jab: [-2.5]
-Iext: [20.0]
-Iext: [26.0]
+Jab: [-2.75]
+Iext: [12.0]
+# Iext: [26.0]
 
 # FILE_NAME: broad
 # THRESH: [15.0]

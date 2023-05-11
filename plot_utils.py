@@ -347,6 +347,7 @@ def bump_diff(filename, config):
             phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
+    plt.figure('diffusion_hist')
     plt.hist(phase_list, histtype='step', bins='auto', density=True)
 
     plt.ylabel('Density')
@@ -376,6 +377,8 @@ def bump_diff_time(filename, config):
             phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
+
+    plt.figure('diffusion_time')
     plt.plot(times, phase_list.T, alpha=.25)
 
     plt.ylabel('Density')
@@ -571,7 +574,7 @@ def bump_I0(filename, config):
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(12, 32, 2)
+    I0_list = np.arange(10, 32, 2)
 
     for I0 in I0_list:
 

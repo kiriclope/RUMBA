@@ -11,11 +11,11 @@ if __name__ == "__main__":
     start = perf_counter()
     name = config['FILE_NAME']
 
-    for I0 in np.arange(12, 32, 2):
+    for I0 in np.arange(10, 32, 2):
 
         config['Iext'] = [I0]
 
-        for i_simul in range(100, 250):
+        for i_simul in range(25, 100):
 
             config['FILE_NAME'] = name + "_I0_%.2f_id_%d" % (I0, i_simul)
             model = Network(**config)
