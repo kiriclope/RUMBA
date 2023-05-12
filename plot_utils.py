@@ -344,6 +344,7 @@ def bump_diff(filename, config):
             phase = phase * 180.0 / np.pi - 180.0
             phase_list.append(phase)
         except:
+            print('error')
             phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
@@ -581,7 +582,7 @@ def bump_I0(filename, config):
         phase_list = []
         m1_list = []
 
-        for i_simul in range(100):
+        for i_simul in range(250):
             try :
                 df, df_E, df_I = get_df(name + "_I0_%.2f_id_%d" % (I0, i_simul), config + '.yml')
 

@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
         config['Iext'] = [I0]
 
-        for i_simul in range(25, 100):
+        for i_simul in range(100, 250):
 
             config['FILE_NAME'] = name + "_I0_%.2f_id_%d" % (I0, i_simul)
             model = Network(**config)

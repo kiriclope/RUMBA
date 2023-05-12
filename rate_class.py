@@ -443,8 +443,8 @@ class Network:
 
     def perturb_inputs(self, step):
 
-        # if step==0:
-        #     self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
+        if step==0:
+            self.ff_inputs_0[self.csumNa[0]:self.csumNa[0+1]] = 0.0
 
         if step==self.N_STIM_ON:
             self.ff_inputs_0[self.csumNa[0]:self.csumNa[1]] = self.Iext[0]
