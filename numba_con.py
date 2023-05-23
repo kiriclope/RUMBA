@@ -158,9 +158,9 @@ def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
     return DJij
 
 @jit(nopython=False, parallel=True, fastmath=True, cache=True)
-def numba_normal(size, SEED=1):
-    # np.random.seed(SEED)
-    
+def numba_normal(size):
+    np.random.seed(5.0)
+
     res = np.zeros(size)
     for i in range(res.shape[0]):
         for j in range(res.shape[0]):
@@ -288,7 +288,7 @@ def strided_method(ar):
 def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, PHASE=0):
 
     # np.random.seed(SEED)
-    
+
     Pij = np.zeros((Na, Nb), dtype=np.float64)
     Cij = np.zeros((Na, Nb), dtype=np.float64)
 
@@ -339,7 +339,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         if "cos" in STRUCTURE: # 1/N (1 + cos)
             Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA) / Nb
             if SIGMA>0.0:
-                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
+                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / Nb
 
             # Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
 

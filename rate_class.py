@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from time import perf_counter
 from yaml import safe_load
@@ -79,7 +80,7 @@ def TF(x, thresh=None, tfname='TL', tfgain=0.5):
     # return np.where(x >= 1.0, np.sqrt(np.abs(4.0 * x - 3.0)), x * x * (x > 0)).astype(np.float64)
     # else:
 
-    # return x * (x > thresh)
+    # return x * (x > 0.0)
     # return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
 
     # return thresh / (1.0 + np.exp(-tfgain *(x-6.0))) * (x>0)
@@ -322,8 +323,6 @@ class Network:
         if self.SEED == 'None':
             self.SEED = None
 
-            np.random.seed(self.SEED)
-
         self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
         self.SIGMA = np.array(const.SIGMA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
         self.KAPPA = np.array(const.KAPPA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
@@ -348,11 +347,11 @@ class Network:
         
         rng = np.random.default_rng()
         ## random initial conditions
-        # mean = [2, 2, 5]
-        # var = [.5, .5, 1]
+        mean = [2, 2, 5]
+        var = [.5, .5, 1]
 
         for i_pop in range(self.N_POP):
-            # self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
+            self.rates[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = rng.normal(mean[i_pop], var[i_pop], self.Na[i_pop])
             self.inputs[i_pop] = rng.normal(10, 10/4.0, self.N)
 
         ## initial conditions from self consistent eqs
@@ -479,13 +478,21 @@ class Network:
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I1[i_pop], self.SIGMA0, self.PHI1, TYPE=self.PERT_TYPE)
 
     def generate_Cij(self):
+        np.random.seed(self.SEED)
+
         Cij = np.zeros((self.N, self.N), dtype=np.float64)
 
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
                 Cab = generate_Cab(self.Ka[j_pre], self.Na[i_post], self.Na[j_pre],
                     self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED, self.PHASE)
-                Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab * self.Jab[i_post][j_pre]
+                Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab
+
+        self.Cij = Cij
+
+        for i_post in range(self.N_POP):
+            for j_pre in range(self.N_POP):
+                Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] * self.Jab[i_post][j_pre]
 
         return Cij
 
@@ -636,7 +643,7 @@ class Network:
             #     # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
             #     self.inputs[0][:self.Na[0]] = stp.A_u_x_stp * self.inputs[0][:self.Na[0]].copy()
 
-        self.Cij = Cij
+        # self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
         self.df = nd_numpy_to_nested(data, N_POP=self.N_POP, IF_STP=self.IF_STP)
@@ -653,7 +660,9 @@ class Network:
 if __name__ == "__main__":
 
     # # set_num_threads(50)
-    config = safe_load(open("./config_bump.yml", "r"))
+    name = sys.argv[1]
+    config = safe_load(open("./config_" + name + ".yml", "r"))
+    config['FILE_NAME'] = name
     model = Network(**config)
 
     start = perf_counter()
@@ -661,36 +670,3 @@ if __name__ == "__main__":
     end = perf_counter()
 
     print("Elapsed (with compilation) = {}s".format((end - start)))
-
-    # config = safe_load(open("./config_itskov.yml", "r"))
-    # start = perf_counter()
-    # name = config['FILE_NAME']
-
-    # for i_simul in range(10):
-    #     config['FILE_NAME'] = name + "_%d" % (i_simul)
-    #     model = Network(**config)
-    #     model.run()
-
-    # end = perf_counter()
-    # print("Elapsed (with compilation) = {}s".format((end - start)))
-
-    # config = safe_load(open("./config.yml", "r"))
-
-    # start = perf_counter()
-    # name = config['FILE_NAME']
-
-    # for i_phase in range(1):
-
-    #     # config['PHI0'] = i_phase * 360.0 / 10.0
-    #     config['PHI0'] = 180.0
-
-    #     for i_simul in range(10):
-
-    #         config['FILE_NAME'] = name + "_%d_%d" % (i_simul, i_phase)
-    #         model = Network(**config)
-    #         model.run()
-
-
-    # end = perf_counter()
-
-    # print("Elapsed (with compilation) = {}s".format((end - start)))

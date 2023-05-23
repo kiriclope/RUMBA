@@ -10,8 +10,8 @@ T_WINDOW: .05
 
 T_STIM_ON: 2.0
 T_STIM_OFF: 2.5
-I0: [2.5, 0.]
-I1: [0.05, 0.0]
+I0: [5.0, 0.]
+I1: [0.0, 0.0]
 PHI0: 180.0
 SIGMA0: 1.0
 DPHI: 0.25
@@ -48,11 +48,11 @@ RATE_VAR: 0.0
 
 GAIN: 1.0
 
-FILE_NAME: sig
+FILE_NAME: sigmoid
 THRESH: [15.0]
 TF_GAIN: 1.0
 Jab: [-2.75]
-Iext: [14.0] 
+Iext: [20.0] 
 # Iext: [28.0]
 # Iext: [32.0]
 
@@ -63,7 +63,7 @@ IF_STP: 0
 
 SEED: None
 STRUCTURE: ['all_cos']
-SIGMA: [0.0]
+SIGMA: [1.0]
 KAPPA: [0.4]
 PHASE: 180.0
 

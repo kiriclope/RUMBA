@@ -188,6 +188,8 @@ def heatmap(df, vmax=20):
 
     ax = sns.heatmap(pt, cmap='jet', vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0)
 
+    # ax = sns.heatmap(pt, cmap='jet', vmax=vmax, lw=0)
+
 
 
 def spatial_profile(df, window=[0, 1], n=250, IF_NORM=0):
@@ -321,18 +323,18 @@ def line_phase(df):
     ax[2].fill_between([2.5, 3.0], y1=180, y2=-180, alpha=.2)
 
     ax[2].hlines(0, 0, 2.5, color='k', ls='--')
-    ax[2].hlines(-(180-.25*180-180), 2.5, 6, color='k', ls='--')
+    ax[2].hlines(-(180-.25*180-180), 2.5, 4.5, color='k', ls='--')
 
-def bump_diff(filename, config):
+def bump_diff(filename, config, n_sim=250):
 
     name = filename
 
     phase_list = []
 
-    for i_simul in range(250):
+    for i_simul in range(n_sim):
 
         try:
-            df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
 
             times = df_E.time.unique()
             n_times = len(times)
@@ -348,22 +350,63 @@ def bump_diff(filename, config):
             phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
+
     plt.figure('diffusion_hist')
-    plt.hist(phase_list, histtype='step', bins='auto', density=True)
+    # plt.hist(phase_list, histtype='step', bins='auto', density=True)
+    plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True)
 
     plt.ylabel('Density')
-    plt.xlabel('Phase (°)')
+    plt.xlabel('End Location (°)')
 
-def bump_diff_time(filename, config):
+def bump_drift(filename, config, n_sim=250):
+
+    name = filename
+
+    phase_lists = []
+    # cue_list = [90, 180, 270]
+    cue_list = [45, 90, 180, 135, 225, 270, 315]
+
+    for cue in cue_list:
+        phase_list = []
+        for i_simul in range(n_sim):
+
+            try:
+                df, df_E, df_I = get_df(name + "_cue_%d_id_%d" % (cue, i_simul), config + '.yml')
+
+                times = df_E.time.unique()
+                n_times = len(times)
+                n_neurons = len(df_E.neurons.unique())
+
+                array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+                m1, phase = decode_bump(array[-1])
+
+                phase = phase * 180.0 / np.pi - 180.0
+                phase_list.append(phase)
+            except:
+                print('error')
+                phase_list.append(np.nan)
+
+        phase_lists.append(phase_list - np.nanmean(phase_list))
+
+    phase_lists = np.hstack(np.array(phase_lists))
+
+    plt.figure('diffusion_hist')
+    plt.hist(phase_lists, histtype='step', bins='auto', density=True)
+
+    plt.ylabel('Density')
+    plt.xlabel('End Location (°)')
+
+
+def bump_diff_time(filename, config, n_sim=250):
 
     name = filename
 
     phase_list = []
 
-    for i_simul in range(25):
+    for i_simul in range(n_sim):
 
         try:
-            df, df_E, df_I = get_df(name + "_%d" % (i_simul), config + '.yml')
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
 
             times = df_E.time.unique()
             n_times = len(times)
@@ -381,9 +424,59 @@ def bump_diff_time(filename, config):
 
     plt.figure('diffusion_time')
     plt.plot(times, phase_list.T, alpha=.25)
+    plt.fill_between([1, 1.5], y1=180, y2=-180, alpha=.2)
 
-    plt.ylabel('Density')
-    plt.xlabel('Phase (°)')
+    plt.ylabel('Phase (°)')
+    plt.xlabel('Time (s)')
+    plt.yticks([-180, -90, 0, 90, 180])
+
+
+def bump_drift_time(filename, config, n_sim=250):
+
+    name = filename
+
+    phase_lists = []
+    # cue_list = [90, 180, 270]
+    cue_list = [45, 90, 180, 135, 225, 270, 315]
+    # list_cues = [135, 225, 315]
+
+    for cue in cue_list:
+        phase_list = []
+
+        for i_simul in range(n_sim):
+
+            try:
+                df, df_E, df_I = get_df(name + "_cue_%d_id_%d" % (cue, i_simul), config + '.yml')
+
+                times = df_E.time.unique()
+                n_times = len(times)
+                n_neurons = len(df_E.neurons.unique())
+
+                array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+                m1, phase = decode_bump(array)
+
+                phase = phase * 180.0 / np.pi - 180.0
+                phase_list.append(phase)
+            except:
+                print("error", name + "_cue_%d_id_%d" % (cue, i_simul), "not found")
+                phase_list.append(np.nan)
+
+        phase_lists.append(phase_list)
+
+    phase_lists = np.array(phase_lists)
+
+    print(phase_lists.shape)
+
+    plt.figure('diffusion_time')
+    for i in range(len(cue_list)):
+        plt.plot(times, phase_lists[i].T, alpha=.1)
+
+    plt.fill_between([1, 1.5], y1=180, y2=-180, alpha=.1)
+    plt.ylabel('Phase (°)')
+    plt.xlabel('Time (s)')
+    plt.yticks([-180, -90, 0, 90, 180])
+
+    plt.savefig(name + '_drift_time.svg', dpi=300)
 
 def J0_J1_space(filename):
 
@@ -568,21 +661,22 @@ def bump_gain(filename, config):
     plt.ylabel('Rel. Bump Amplitude (Hz)')
     plt.xlabel('Gain (a.u.)')
 
-def bump_I0(filename, config):
+def bump_I0(filename, config, n_sim=250):
 
     name = filename
 
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(10, 32, 2)
+    I0_list = np.arange(12, 30, 2)
+    # I0_list = np.arange(24, 62, 2)
 
     for I0 in I0_list:
 
         phase_list = []
         m1_list = []
 
-        for i_simul in range(250):
+        for i_simul in range(n_sim):
             try :
                 df, df_E, df_I = get_df(name + "_I0_%.2f_id_%d" % (I0, i_simul), config + '.yml')
 
@@ -610,11 +704,33 @@ def bump_I0(filename, config):
     plt.figure('diff_I0')
     plt.plot(I0_list, var_list)
     plt.ylabel('Diffusion (°)')
-    plt.xlabel('$I_0$ (a.u.)')
+    plt.xlabel('FF Input (a.u.)')
+
+    plt.savefig(filename + '_diff_I0.svg', dpi=300)
 
     M1_list = np.array(M1_list)
 
     plt.figure('m1_I0')
     plt.plot(I0_list, M1_list)
-    plt.ylabel('Rel. Bump Amplitude (Hz)')
-    plt.xlabel('$I_0$ (a.u.)')
+    plt.ylabel('Rel. Bump Amplitude')
+    plt.xlabel('FF Input (a.u.)')
+
+    plt.savefig(filename + '_m1_I0.svg', dpi=300)
+
+    # plt.figure('corr_I0')
+    # plt.scatter(M1_list, var_list)
+    # plt.ylabel('Rel. Bump Amplitude')
+    # plt.xlabel('Diffusion (°)')
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(I0_list, var_list, color='black')
+    ax1.set_ylabel('Diffusion (°)', color='black')
+    ax1.set_xlabel('FF Input (a.u.)', color='black')
+
+    ax2 = ax1.twinx()
+    ax2.plot(I0_list, M1_list, color='grey')
+    ax2.set_ylabel('Rel. Bump Amplitude', color='grey')
+    ax2.tick_params(axis='y', labelcolor='grey')
+    ax2.set_ylim([0, 1])
+
+    plt.savefig(filename + '_all_I0.svg', dpi=300)
