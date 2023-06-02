@@ -7,6 +7,9 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import pandas as pd
 from scipy.ndimage.filters import gaussian_filter
 from yaml import safe_load
+from scipy.stats import f_oneway
+
+from bootstrap import my_boots_ci
 
 from decode import circcvl, decode_bump
 sns.set_context("poster")
@@ -17,6 +20,7 @@ golden_ratio = (5**.5 - 1) / 2
 width = 7.5
 matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
 
+pal = [sns.color_palette("tab10")[0], sns.color_palette("tab10")[1]]
 
 class Bunch(object):
   def __init__(self, adict):
@@ -279,6 +283,77 @@ def animated_bump(df, window=15, interval=10):
 
     plt.close('all')
 
+def pev_anova(data):
+    neuron_variances = np.var(data[:, :50], axis=0, ddof=1)
+
+    # Perform one-way ANOVA to obtain F-values and p-values for each neuron
+    f_values, p_values = [], []
+    for i in range(50):
+        # rnd = np.random.randint(1000)
+
+        # rng = np.random.default_rng()
+        # rng.shuffle(data, axis=1)
+
+        neuron_data = data[:, i]
+        other_neurons_data = np.delete(data[:,:50], i, axis=1)
+        f, p = f_oneway(neuron_data, *other_neurons_data.T)
+        f_values.append(f)
+        p_values.append(p)
+
+    # Calculate the percentage explained variance for each neuron
+    pev = np.multiply(f_values, neuron_variances) / np.sum(neuron_variances)
+
+    return pev
+
+def bump_pev(filename, config, n_sim=250, ipal=0):
+
+    name = filename
+
+    data = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_time = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_time, n_neurons))
+            data.append(array.T)
+
+        except:
+            print('error')
+            data.append(np.nan)
+
+    data = np.array(data)
+    print(data.shape)
+
+    # data = data.reshape(10, 10, n_neurons, n_time)
+
+    for i in range(data.shape[0]):
+        rnd = np.random.randint(1000)
+        data[i] = np.roll(data[i], rnd, axis=0)
+
+    # Calculate the variance for each neuron across all trials
+
+    rng = np.random.default_rng()
+    pev_list = []
+    for i in range(data.shape[-1]): # time
+        arr = data[:,:,i]
+        pev= pev_anova(arr)
+        pev_list.append(np.array(pev))
+
+    pev_list = np.array(pev_list)
+    plt.figure('pev_time')
+    # plt.plot(times, pev_list, alpha=.25)
+    plt.plot(times, np.mean(pev_list, 1), color=pal[ipal], alpha=1)
+
+    plt.ylabel('PEV')
+    plt.xlabel('Time (s)')
+
+
 def line_phase(df):
 
     times = df.time.unique()
@@ -325,11 +400,12 @@ def line_phase(df):
     ax[2].hlines(0, 0, 2.5, color='k', ls='--')
     ax[2].hlines(-(180-.25*180-180), 2.5, 4.5, color='k', ls='--')
 
-def bump_diff(filename, config, n_sim=250):
+def bump_diff(filename, config, n_sim=250, ipal=0):
 
     name = filename
 
     phase_list = []
+    m1_list = []
 
     for i_simul in range(n_sim):
 
@@ -344,6 +420,8 @@ def bump_diff(filename, config, n_sim=250):
             m1, phase = decode_bump(array[-1])
         
             phase = phase * 180.0 / np.pi - 180.0
+            # if abs(phase)>10:
+            #   phase = np.nan
             phase_list.append(phase)
         except:
             print('error')
@@ -352,11 +430,145 @@ def bump_diff(filename, config, n_sim=250):
     phase_list = np.array(phase_list)
 
     plt.figure('diffusion_hist')
-    # plt.hist(phase_list, histtype='step', bins='auto', density=True)
-    plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True)
+    plt.hist(phase_list, histtype='step', bins='auto', density=True, color=pal[ipal], lw=5)
+    # plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
+
+    # plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True)
 
     plt.ylabel('Density')
     plt.xlabel('End Location (°)')
+
+def bump_diff_thresh(filename, config, n_sim=250, ipal=0):
+
+    name = filename
+
+    phase_list = []
+    m1_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            print('error')
+            phase_list.append(np.nan)
+
+    drift = np.array(phase_list)
+
+    THRESH_LIST = np.linspace(0, 20, 20)
+    drift_list = []
+    per_list = []
+
+    for thresh in THRESH_LIST:
+
+        off = drift[np.abs(drift)<thresh]
+        drift_list.append(np.nanmean(off))
+        _, ci_off = my_boots_ci(off, np.nanmean, verbose=0, n_samples=1000)
+        per_list.append(ci_off[0])
+
+    per_list = np.array(per_list).T
+    plt.plot(THRESH_LIST, drift_list, color=pal[ipal])
+    plt.fill_between(THRESH_LIST, drift_list-per_list[0], drift_list+per_list[1], alpha=0.2)
+
+    plt.xlabel('Threshold (°)')
+    plt.ylabel('Shift (°)')
+    plt.yticks([0, 2.5, 5.0])
+
+def bump_diff_perf(filename, config, n_sim=250, ipal=0):
+
+    name = filename
+
+    phase_list = []
+    m1_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            print('error')
+            phase_list.append(np.nan)
+
+    drift = np.array(phase_list)
+
+    THRESH_LIST = np.linspace(0, 20, 20)
+    drift_list = []
+    per_list = []
+
+    for thresh in THRESH_LIST:
+
+        off = np.nansum(np.abs(drift)<thresh) / drift.shape[0]
+        drift_list.append(off)
+        _, ci_off = my_boots_ci(np.abs(drift)<thresh, np.nansum, verbose=0, n_samples=1000)
+
+        per_list.append(ci_off[0] / drift.shape[0])
+
+    per_list = np.array(per_list).T
+    plt.plot(THRESH_LIST, drift_list, color=pal[ipal])
+    plt.fill_between(THRESH_LIST, drift_list-per_list[0], drift_list+per_list[1], alpha=0.2)
+
+    plt.xlabel('Threshold (°)')
+    plt.ylabel('Performance')
+    plt.yticks([0, .25, .5, .75, 1])
+
+    
+def bump_SNR(filename, config, n_sim=250):
+
+    name = filename
+
+    phase_list = []
+    m1_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            m0 = np.mean(array[-1])
+            amp = m1 / m0
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(amp*phase)
+
+        except:
+            print('error')
+            phase_list.append(np.nan)
+
+    phase_list = np.array(phase_list)
+
+    plt.figure('diffusion_hist')
+    # plt.hist(phase_list, histtype='step', bins='auto', density=True)
+    plt.hist(phase_list, histtype='step', bins='auto', density=True)
+
+    plt.ylabel('Density')
+    plt.xlabel('SNR $(deg^-1)$')
 
 def bump_drift(filename, config, n_sim=250):
 
@@ -432,6 +644,41 @@ def bump_diff_time(filename, config, n_sim=250):
 
 
 def bump_drift_time(filename, config, n_sim=250):
+
+    name = filename
+
+    phase_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array)
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            phase_list.append(np.nan)
+
+    phase_list = np.array(phase_list).T
+
+    drift = np.sqrt(np.nanmean(phase_list**2, axis=1))
+
+    plt.figure('diffusion_time')
+    plt.plot(times, drift, alpha=.25)
+    plt.fill_between([1, 1.5], y1=180, y2=-180, alpha=.2)
+
+    plt.ylabel('Error (°)')
+    plt.xlabel('Time (s)')
+    plt.yticks([-180, -90, 0, 90, 180])
+
+def bump_drift_cue_time(filename, config, n_sim=250):
 
     name = filename
 
@@ -668,13 +915,16 @@ def bump_I0(filename, config, n_sim=250):
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(12, 30, 2)
+    I0_list = np.arange(12, 28, 2)
     # I0_list = np.arange(24, 62, 2)
 
     for I0 in I0_list:
 
         phase_list = []
         m1_list = []
+
+        phase_ci = []
+        m1_ci = []
 
         for i_simul in range(n_sim):
             try :
@@ -696,19 +946,27 @@ def bump_I0(filename, config, n_sim=250):
                 phase_list.append(np.nan)
                 m1_list.append(np.nan)
 
+
+        _, cim = my_boots_ci(np.array(m1_list), np.nanmean, verbose=0, n_samples=1000)
+        _, cip = my_boots_ci(np.array(phase_list), np.nanstd, verbose=0, n_samples=1000)
+
+        m1_ci.append(cim[0])
+        phase_ci.append(cip[0])
+
         var_list.append(np.nanstd(phase_list))
         M1_list.append(np.nanmean(m1_list))
 
     var_list = np.array(var_list)
-
-    plt.figure('diff_I0')
-    plt.plot(I0_list, var_list)
-    plt.ylabel('Diffusion (°)')
-    plt.xlabel('FF Input (a.u.)')
-
-    plt.savefig(filename + '_diff_I0.svg', dpi=300)
-
     M1_list = np.array(M1_list)
+    m1_ci = np.array(m1_ci).T
+    phase_ci = np.array(phase_ci).T
+
+    # plt.figure('diff_I0')
+    # plt.plot(I0_list, var_list)
+    # plt.ylabel('Diffusion (°)')
+    # plt.xlabel('FF Input (a.u.)')
+
+    # plt.savefig(filename + '_diff_I0.svg', dpi=300)
 
     plt.figure('m1_I0')
     plt.plot(I0_list, M1_list)
@@ -726,11 +984,13 @@ def bump_I0(filename, config, n_sim=250):
     ax1.plot(I0_list, var_list, color='black')
     ax1.set_ylabel('Diffusion (°)', color='black')
     ax1.set_xlabel('FF Input (a.u.)', color='black')
+    ax1.fill_between(I0_list, var_list - phase_ci[0], var_list + phase_ci[1], alpha=0.2)
 
     ax2 = ax1.twinx()
     ax2.plot(I0_list, M1_list, color='grey')
     ax2.set_ylabel('Rel. Bump Amplitude', color='grey')
     ax2.tick_params(axis='y', labelcolor='grey')
     ax2.set_ylim([0, 1])
+    ax2.fill_between(I0_list, M1_list-m1_ci[0], M1_list + m1_ci[1], alpha=0.2)
 
     plt.savefig(filename + '_all_I0.svg', dpi=300)

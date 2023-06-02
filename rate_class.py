@@ -566,10 +566,10 @@ class Network:
                 # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
                 self.inputs[0,:self.Na[0]] = stp.A_u_x_stp * self.inputs[0,:self.Na[0]].copy()
 
-            if step < self.N_STEADY:
-                self.mean_rates = self.mean_rates + self.rates
-            if step == self.N_STEADY:
-                self.mean_rates = self.mean_rates / self.N_STEADY
+            # if step < self.N_STEADY:
+            #     self.mean_rates = self.mean_rates + self.rates
+            # if step == self.N_STEADY:
+            #     self.mean_rates = self.mean_rates / self.N_STEADY
 
             if self.IF_LEARNING and step >= self.N_STEADY:
 
