@@ -7,11 +7,6 @@ from scipy.ndimage import convolve
 def numba_sample_proba(p, size):
 
     shape = size
-    # if shape is not None:
-    #     size = np.prod(shape).astype(np.intp)
-    # else:
-    #     size = 1
-
     if np.count_nonzero(p > 0) < size:
         raise ValueError("Fewer non-zero entries in p than size")
 
@@ -158,13 +153,19 @@ def numba_update_Jij(DJij, cos_mat, EXP_DT_TAU):
     return DJij
 
 @jit(nopython=False, parallel=True, fastmath=True, cache=True)
-def numba_normal(size):
-    np.random.seed(5.0)
+def numba_normal(size, SEED=0):
+    np.random.seed(SEED)
 
     res = np.zeros(size)
-    for i in range(res.shape[0]):
-        for j in range(res.shape[0]):
-            res[i,j] = np.random.standard_normal()
+    if len(size)==2:
+        for i in range(res.shape[0]):
+            for j in range(res.shape[1]):
+                res[i,j] = np.random.standard_normal()
+                # res[i,j] = np.random.uniform(0.0, 1.0)
+    else:
+        for i in range(res.shape[0]):
+            # res[i] = np.random.standard_normal()
+            res[i] = np.random.uniform(0.0, 1.0)
 
     return res
 
@@ -285,14 +286,16 @@ def strided_method(ar):
 #     return i0(*args)
 
 @jit(nopython=False, parallel=True, fastmath=True, cache=True)
-def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, PHASE=0):
+def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHASE=0, verbose=0):
 
     # np.random.seed(SEED)
 
     Pij = np.zeros((Na, Nb), dtype=np.float64)
     Cij = np.zeros((Na, Nb), dtype=np.float64)
 
-    print('random connectivity')
+    if verbose:
+        print('random connectivity')
+
     if STRUCTURE != 'None':
         theta = np.linspace(0.0, 2.0 * np.pi, Nb)
         phi = np.linspace(0.0, 2.0 * np.pi, Na)
@@ -307,7 +310,8 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
 
         theta_ij = theta_mat(theta, phi)
         if 'lateral' in STRUCTURE:
-            print('lateral')
+            if verbose:
+                print('lateral')
             cos_ij = np.cos(theta_ij - np.pi)
         else:
             cos_ij = np.cos(theta_ij - PHASE)
@@ -322,40 +326,39 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         # else:
         #     Pij[:, :] = cos_ij
 
-    if "ring" in STRUCTURE:
-        print('with strong cosine structure')
+    if "cos" in STRUCTURE:
+        if verbose:
+            print('with strong cosine structure')
         Pij[:, :] = Pij * np.float64(KAPPA)
 
     elif "spec_cos" in STRUCTURE:
-        print('with spec cosine structure')
+        if verbose:
+            print('with spec cosine structure')
         Pij[:, :] = Pij * KAPPA / np.sqrt(Kb)
     
     elif "gauss" in STRUCTURE:
         Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
 
     if "all" in STRUCTURE:
-        print('with all to all cosine structure')
+        if verbose:
+            print('with all to all cosine structure')
         # itskov hansel
         if "cos" in STRUCTURE: # 1/N (1 + cos)
-            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA) / Nb
-            if SIGMA>0.0:
-                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / Nb
+            Cij[:, :] = (1.0 + 2.0 * Pij * KAPPA) / Nb
 
-            # Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
-
-        elif "spec" in STRUCTURE: # 1/N + 1/sqrtN cos
-            Cij[:, :] = (1.0 + 2.0 * Pij[:, :] * KAPPA / np.sqrt(Nb)) / Nb
             if SIGMA>0.0:
-                Cij[:, :] =  Cij[:, :] + SIGMA * numba_normal((Nb,Nb)) / np.sqrt(Nb)
-            
-            Cij[:, :] = 1.0 * Cij[:, :] * (Cij>0)
+                Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb
+
+            # if SIGMA>0.0:
+            #     Cij[:, :] =  Cij + np.sqrt(SIGMA) * Pij * numba_normal((Nb,Nb), SEED) / Nb
+            #     Cij[:, :] = np.triu(Cij) + np.triu(Cij, 1).T
 
         elif "id" in STRUCTURE:
             Cij[:, :] = np.identity(Nb)
             
         else:
             Cij[:, :] = 1.0 / Nb 
-            
+
         # Cij[:, :] = Cij[:, :] * (Cij>=0)
 
         # Z = Nb / np.sum(Cij, axis=1) / (2.0 * np.pi)
@@ -365,16 +368,16 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         # Z = Nb / np.sum(Cij, axis=1)
         # Cij[:, :] = Cij[:, :] * Z
 
-        # Cij[:, :] = von_mises(theta_ij, np.float64(KAPPA))
-
     elif STRUCTURE == "gauss":
-        print('with strong gauss proba')
+        if verbose:
+            print('with strong gauss proba')
         Z = Kb / np.sum(Pij, axis=1)
         Pij[:, :] = Pij[:, :] * Z
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
 
     elif "spec_gauss" in STRUCTURE:
-        print('with spec gauss proba')
+        if verbose:
+            print('with spec gauss proba')
         # Z = KAPPA * np.sqrt(Kb) / np.sum(Pij, axis=1)
         # Pij[:, :] = Kb / Nb + Pij[:, :] * Z
 
@@ -396,20 +399,23 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < Pij)
 
     elif "spec_rand" in STRUCTURE:
-        print("with random spec")
+        if verbose:
+            print("with random spec")
         Cij[:, :] = numba_random_choice(int(Kb-np.sqrt(Kb)), Nb, Pij) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + KAPPA * (np.random.rand(Na, Nb) < 2.0 * np.sqrt(Kb) / Nb)
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < (Kb - KAPPA * np.sqrt(Kb)) /Nb) + 1.0 * (np.random.rand(Na, Nb) < KAPPA * np.sqrt(Kb) /Nb)
 
     elif "spec_cos_weak" in STRUCTURE:
-        print("with weak cos spec")
+        if verbose:
+            print("with weak cos spec")
         Pij[:, :] = np.sqrt(Kb) * Pij[:, :] + 1.0
         Cij[:, :] = numba_random_choice(int(Kb-np.sqrt(Kb)), int(Nb), Pij)
         Cij[:, :] = Cij[:, :] + SIGMA * (np.random.rand(Na, Nb) < (np.sqrt(Kb) / Nb) * Pij )
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb / Nb) + SIGMA * (np.random.rand(Na, Nb) < (2.0 * np.sqrt(Kb) / Nb) * Pij )
 
     elif "spec_cos_nq" in STRUCTURE:
-        print("with weak cos spec")
+        if verbose:
+            print("with weak cos spec")
         Pij[:, :] =  (Kb / Nb) * (Pij[:, :] + 1.0)
         Cij[:, :] = numba_random_choice(int(Kb), int(Nb), Pij)
 
@@ -417,7 +423,8 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
         Cij[:, :] = numba_random_choice(int(Kb), int(Nb), Pij, DUM=0)
 
     elif "reciprocal" in STRUCTURE:
-        print('with reciprocal connections')
+        if verbose:
+            print('with reciprocal connections')
         # Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) <= (1.0 - SIGMA) * Kb / Nb * (1.0 - Kb / Nb))
         # dum = 1.0 * (np.random.rand(Na, Nb) <= (SIGMA * (Kb / Nb) + (1.0 - SIGMA) * Kb**2 / Nb**2))
         # Cij[:, :] = Cij + dum + dum.T
@@ -433,11 +440,12 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=None, 
             Cij[:, :] = Cij * Pij
 
     elif "recip_nq" in STRUCTURE:
-        print('with fixed reciprocal connections')
+        if verbose:
+            print('with fixed reciprocal connections')
         Pij[:, :] = Kb / Nb * (Pij + 1.0)
         Cij[:, :] = numba_reciprocal_fixed(Kb, Nb, SIGMA, Pij)
     else:
-        Pij[:, :] = (Kb / Nb) *(Pij + 1.0)
+        Pij[:, :] = (Kb / Nb) * (2.0 * Pij + 1.0)
         Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
 
     return Cij

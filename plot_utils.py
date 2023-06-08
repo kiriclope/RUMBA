@@ -27,6 +27,37 @@ class Bunch(object):
     self.__dict__.update(adict)
 
 
+def get_lif():
+    rates = np.loadtxt('../lif_cpp/new/simul/rates.txt')
+    volts = np.loadtxt('../lif_cpp/new/simul/volts.txt')
+    inputsE = np.loadtxt('../lif_cpp/new/simul/inputsE.txt')
+    inputsI = np.loadtxt('../lif_cpp/new/simul/inputsI.txt')
+
+    # x_stp = np.loadtxt('../lif_cpp/new/simul/x_stp.txt')
+    # u_stp = np.loadtxt('../lif_cpp/new/simul/u_stp.txt')
+
+    time = np.arange(rates.shape[0])
+
+    X = np.stack((rates, volts, inputsE, inputsI), axis=-1)
+    print(X.shape)
+
+    variables = ['rates', 'volts', 'h_E', 'h_I']
+
+    df = pd.DataFrame()
+    idx = np.arange(0, X.shape[1], 1)
+    for i_time in range(X.shape[0]):
+        df_i = pd.DataFrame(X[i_time], columns=variables)
+        df_i['neurons'] = idx
+        df_i['time'] = time[i_time]
+
+        # print(df_i)
+        df = pd.concat((df, df_i))
+
+    df_E = df[df.neurons<10000]
+
+    return df_E
+
+
 def get_df(filename, configname='config.yml'):
     config = safe_load(open(configname, "r"))
     const = Bunch(config)
@@ -356,14 +387,19 @@ def bump_pev(filename, config, n_sim=250, ipal=0):
 
 def line_phase(df):
 
+    # data = np.loadtxt('../lif_cpp/new/simul/rates.txt')
+    # times = np.arange(1, data.shape[0])
+    # n_times = data.shape[0] - 1
+    # n_neurons = int(data.shape[1] * 0.75)
+    # array = data[1:, :int(data.shape[1]*0.75)]
+
     times = df.time.unique()
     n_times = len(times)
     n_neurons = len(df.neurons.unique())
 
-    print(n_times, n_neurons)
-
     array = df.rates.to_numpy().reshape((n_times, n_neurons))
 
+    print(n_times, n_neurons)
     print(array.shape)
     m1, phase = decode_bump(array)
     print(m1.shape, phase.shape)
@@ -570,7 +606,7 @@ def bump_SNR(filename, config, n_sim=250):
     plt.ylabel('Density')
     plt.xlabel('SNR $(deg^-1)$')
 
-def bump_drift(filename, config, n_sim=250):
+def bump_drift(filename, config, n_sim=250, ipal=0):
 
     name = filename
 
@@ -592,18 +628,19 @@ def bump_drift(filename, config, n_sim=250):
                 array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
                 m1, phase = decode_bump(array[-1])
 
-                phase = phase * 180.0 / np.pi - 180.0
-                phase_list.append(phase)
+                phase = phase * 180.0 / np.pi
+                print('phase', phase, 'cue', 360-cue)
+                phase_list.append(phase - (360 -cue))
             except:
                 print('error')
                 phase_list.append(np.nan)
 
-        phase_lists.append(phase_list - np.nanmean(phase_list))
+        phase_lists.append(phase_list)
 
     phase_lists = np.hstack(np.array(phase_lists))
 
     plt.figure('diffusion_hist')
-    plt.hist(phase_lists, histtype='step', bins='auto', density=True)
+    plt.hist(phase_lists, histtype='step', bins='auto', density=True, color=pal[ipal])
 
     plt.ylabel('Density')
     plt.xlabel('End Location (°)')
@@ -915,7 +952,7 @@ def bump_I0(filename, config, n_sim=250):
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(12, 28, 2)
+    I0_list = np.arange(10, 32, 2)
     # I0_list = np.arange(24, 62, 2)
 
     for I0 in I0_list:
@@ -948,15 +985,15 @@ def bump_I0(filename, config, n_sim=250):
 
 
         _, cim = my_boots_ci(np.array(m1_list), np.nanmean, verbose=0, n_samples=1000)
-        _, cip = my_boots_ci(np.array(phase_list), np.nanstd, verbose=0, n_samples=1000)
+        _, cip = my_boots_ci(np.array(phase_list), np.nanvar, verbose=0, n_samples=1000)
 
         m1_ci.append(cim[0])
         phase_ci.append(cip[0])
 
-        var_list.append(np.nanstd(phase_list))
+        var_list.append(np.nanvar(phase_list))
         M1_list.append(np.nanmean(m1_list))
 
-    var_list = np.array(var_list)
+    var_list = np.array(var_list) / 2.0
     M1_list = np.array(M1_list)
     m1_ci = np.array(m1_ci).T
     phase_ci = np.array(phase_ci).T
@@ -978,11 +1015,11 @@ def bump_I0(filename, config, n_sim=250):
     # plt.figure('corr_I0')
     # plt.scatter(M1_list, var_list)
     # plt.ylabel('Rel. Bump Amplitude')
-    # plt.xlabel('Diffusion (°)')
+    # plt.xlabel('Diffusion ($\text{deg}^2$/$s$)')
 
     fig, ax1 = plt.subplots()
     ax1.plot(I0_list, var_list, color='black')
-    ax1.set_ylabel('Diffusion (°)', color='black')
+    ax1.set_ylabel('Diffusivity ($deg^2$/$s$)', color='black')
     ax1.set_xlabel('FF Input (a.u.)', color='black')
     ax1.fill_between(I0_list, var_list - phase_ci[0], var_list + phase_ci[1], alpha=0.2)
 
@@ -990,7 +1027,7 @@ def bump_I0(filename, config, n_sim=250):
     ax2.plot(I0_list, M1_list, color='grey')
     ax2.set_ylabel('Rel. Bump Amplitude', color='grey')
     ax2.tick_params(axis='y', labelcolor='grey')
-    ax2.set_ylim([0, 1])
+    ax2.set_ylim([0.5, 1])
     ax2.fill_between(I0_list, M1_list-m1_ci[0], M1_list + m1_ci[1], alpha=0.2)
 
     plt.savefig(filename + '_all_I0.svg', dpi=300)

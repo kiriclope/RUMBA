@@ -38,7 +38,8 @@ def nd_numpy_to_nested(X, N_POP=2, IF_STP=0):
     -------
     pandas DataFrame
     """
-    print(X.shape)
+
+    # print(X.shape)
 
     if IF_STP:
         if N_POP==2:
@@ -81,9 +82,7 @@ def TF(x, thresh=None, tfname='TL', tfgain=0.5):
     # else:
 
     # return x * (x > 0.0)
-    # return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
-
-    # return thresh / (1.0 + np.exp(-tfgain *(x-6.0))) * (x>0)
+# return x * (x > 0) * (x <= thresh)  + (tfgain * x + thresh * (1.0 - tfgain)) * (x >= thresh)
 
     # elif tfname=='Sig':
     return thresh * (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
@@ -108,13 +107,11 @@ def numba_update_inputs(Cij, rates, inputs, csumNa, EXP_DT_TAU_SYN, SYN_DYN=1):
 
     if SYN_DYN == 0:
         for i_pop in range(inputs.shape[0]):
-            # inputs[i_pop] = np.dot(rates[csumNa[i_pop]:csumNa[i_pop+1]], Cij[csumNa[i_pop]:csumNa[i_pop+1]])
             inputs[i_pop] = np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
     else:
         for i_pop in range(inputs.shape[0]):
             inputs[i_pop] = inputs[i_pop] * EXP_DT_TAU_SYN[i_pop]
             inputs[i_pop] = inputs[i_pop] + np.dot(Cij[:, csumNa[i_pop]:csumNa[i_pop+1]], rates[csumNa[i_pop]:csumNa[i_pop+1]])
-            # inputs[i_pop] = inputs[i_pop] + np.dot(rates[csumNa[i_pop]:csumNa[i_pop+1]], Cij[csumNa[i_pop]:csumNa[i_pop+1]])
 
     return inputs
 
@@ -153,6 +150,9 @@ class Network:
     def __init__(self, **kwargs):
 
         const = Bunch(kwargs)
+
+        self.IF_LOAD_MAT = const.IF_LOAD_MAT
+        self.IF_SAVE_MAT = const.IF_SAVE_MAT
 
         self.PHASE = const.PHASE * np.pi / 180.0
 
@@ -274,7 +274,16 @@ class Network:
 
         self.Jab = np.array(const.Jab, dtype=np.float64).reshape(self.N_POP, self.N_POP)
 
-        print('Jab', self.Jab)
+        if self.verbose:
+            print('Jab', self.Jab)
+
+        self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
+        self.SIGMA = np.array(const.SIGMA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
+        self.KAPPA = np.array(const.KAPPA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
+
+        if self.verbose:
+            print('SIGMA', self.SIGMA)
+        self.SIGMA = self.SIGMA / np.abs(self.Jab)
 
         self.GAIN = const.GAIN
         self.Jab *= const.GAIN
@@ -284,7 +293,8 @@ class Network:
 
         self.Iext = np.array(const.Iext, dtype=np.float64)
 
-        print('Iext', self.Iext)
+        if self.verbose:
+            print('Iext', self.Iext)
 
         try:
             self.mf_rates = -np.dot(np.linalg.inv(self.Jab), self.Iext)
@@ -322,10 +332,6 @@ class Network:
         self.SEED = const.SEED
         if self.SEED == 'None':
             self.SEED = None
-
-        self.STRUCTURE = np.array(const.STRUCTURE).reshape(self.N_POP, self.N_POP)
-        self.SIGMA = np.array(const.SIGMA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
-        self.KAPPA = np.array(const.KAPPA, dtype=np.float64).reshape(self.N_POP, self.N_POP)
 
         # LEARNING
         self.IF_LEARNING = const.IF_LEARNING
@@ -451,13 +457,15 @@ class Network:
             #     self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = 1.1 * self.Iext[i_pop]
 
         if step == self.N_STIM_ON:
-            print('STIM ON')
+            if self.verbose:
+                print('STIM ON')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
 
         if step == self.N_STIM_OFF:
-            print('STIM OFF')
+            if self.verbose:
+                print('STIM OFF')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I0[i_pop], self.SIGMA0, self.PHI0, TYPE=self.PERT_TYPE)
@@ -466,13 +474,15 @@ class Network:
             self.ff_inputs_0[self.csumNa[0]:self.csumNa[1]] = self.Iext[0]
 
         if step == self.N_CUE_ON:
-            print('CUE ON')
+            if self.verbose:
+                print('CUE ON')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] + pertur_func(theta, self.I1[i_pop], self.SIGMA0, self.PHI1, TYPE=self.PERT_TYPE)
 
         if step == self.N_CUE_OFF:
-            print('CUE OFF')
+            if self.verbose:
+                print('CUE OFF')
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] = self.ff_inputs_0[self.csumNa[i_pop]:self.csumNa[i_pop+1]] - pertur_func(theta, self.I1[i_pop], self.SIGMA0, self.PHI1, TYPE=self.PERT_TYPE)
@@ -514,18 +524,23 @@ class Network:
 
     def run(self):
         NE = self.Na[0]
-        Cij = self.generate_Cij()
-        # Cij = csc_matrix(Cij, dtype=np.float64)
+
+        if self.IF_LOAD_MAT:
+            Cij = np.load("Cij.npy")
+        else:
+            Cij = self.generate_Cij()
+            if self.IF_SAVE_MAT:
+                np.save("Cij.npy", Cij)
 
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
 
+        np.random.seed(None)
+
         if self.IF_STP:
-            # Cij_stp = generate_Cab(self.Ka[0], self.Na[0], self.Na[0], 'spec_cos_weak', self.SIGMA[0, 0], self.KAPPA[0, 0], self.SEED) * self.Jab[0][0]
-            # Cij_fix = Cij[:self.Na[0],:self.Na[0]].copy()
-            # Cij_stp = Cij[:self.Na[0],:self.Na[0]].copy()
             stp = STP_Model(self.Na[0], self.DT)
-            print('stp:', stp.USE, stp.TAU_REC, stp.TAU_FAC)
+            if self.verbose:
+                print('stp:', stp.USE, stp.TAU_REC, stp.TAU_FAC)
 
         if self.IF_LEARNING:
             DJij = np.zeros((self.Na[0], self.Na[0]), dtype=np.float64)
@@ -538,7 +553,9 @@ class Network:
             # Jij = numba_multiple_maps(self.Ka[0], self.Na[0], self.KAPPA[0][0], N_MAPS)
             # Cij[:self.Na[0],:self.Na[0]] = Cij[:self.Na[0],:self.Na[0]] * (1.0 + Jij)
 
-        self.print_params()
+
+        if self.verbose:
+            self.print_params()
 
         running_step = 0
         data = []
@@ -554,17 +571,16 @@ class Network:
             # self.update_inputs(Cij)
             self.inputs = numba_update_inputs(Cij, self.rates, self.inputs, self.csumNa, self.EXP_DT_TAU_SYN, self.SYN_DYN)
 
+            if self.IF_STP:
+                self.inputs[0,:self.Na[0]] = stp.A_u_x_stp * self.inputs[0,:self.Na[0]]
+                stp.hansel_stp(self.rates[:self.Na[0]])
+                # stp.markram_stp(self.rates[:self.Na[0]].copy())
+
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(Cij_NMDA, self.rates, self.inputs_NMDA, self.csumNa, self.EXP_DT_TAU_NMDA, self.SYN_DYN)
 
             # self.update_rates()
             self.rates = numba_update_rates(self.rates, self.inputs, self.ff_inputs, self.inputs_NMDA, self.thresh, self.TF_NAME, self.TF_GAIN, self.csumNa, self.EXP_DT_TAU_MEM, self.DT_TAU_MEM, RATE_DYN = self.RATE_DYN, IF_NMDA=self.IF_NMDA, RATE_NOISE=self.RATE_NOISE, RATE_VAR=self.RATE_VAR)
-
-            if self.IF_STP:
-                # stp.markram_stp(self.rates[:self.Na[0]].copy())
-                stp.hansel_stp(self.rates[:self.Na[0]].copy())
-                # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
-                self.inputs[0,:self.Na[0]] = stp.A_u_x_stp * self.inputs[0,:self.Na[0]].copy()
 
             # if step < self.N_STEADY:
             #     self.mean_rates = self.mean_rates + self.rates
@@ -610,14 +626,14 @@ class Network:
                     else:
                         data.append(np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T)
 
-                    try:
-                        print('time (ms)', np.round(step/self.N_STEPS, 2),
-                            'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
-                            np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
-                            np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
-                    except:
-                        print('time (ms)', np.round(step/self.N_STEPS, 2),
-                              'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
+                    # try:
+                    #     print('time (ms)', np.round(step/self.N_STEPS, 2),
+                    #           'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2),
+                    #           np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
+                    #           np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
+                    # except:
+                    #     print('time (ms)', np.round(step/self.N_STEPS, 2),
+                    #           'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
 
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
@@ -633,23 +649,17 @@ class Network:
                         amplitudes.append(m1)
                         phases.append(phase * 180.0 / np.pi)
 
-                    print('m1', np.round(amplitudes,2), 'phase', np.round(phases, 2))
+                    # print('m1', np.round(amplitudes,2), 'phase', np.round(phases, 2))
 
                     running_step = 0
 
-            # if self.IF_STP:
-            #     # stp.markram_stp(self.rates[:self.Na[0]].copy())
-            #     stp.hansel_stp(self.rates[:self.Na[0]].copy())
-            #     # self.rates[:self.Na[0]] = stp.A_u_x_stp * self.rates[:self.Na[0]].copy()
-            #     self.inputs[0][:self.Na[0]] = stp.A_u_x_stp * self.inputs[0][:self.Na[0]].copy()
-
-        # self.Cij = Cij
         del Cij
         data = np.stack(np.array(data), axis=0)
         self.df = nd_numpy_to_nested(data, N_POP=self.N_POP, IF_STP=self.IF_STP)
 
         if self.SAVE:
-            print('saving data to', self.FILE_NAME + '.h5')
+            if self.verbose:
+                print('saving data to', self.FILE_NAME + '.h5')
             store = HDFStore('./simul/' + self.FILE_NAME + '.h5', 'w')
             store.append('data', self.df, format='table', data_columns=True)
             store.close()
