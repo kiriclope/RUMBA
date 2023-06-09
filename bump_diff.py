@@ -12,13 +12,23 @@ if __name__ == "__main__":
 
     start = perf_counter()
 
-    for i_simul in range(0, 250):
+    config['verbose'] = 0
+    config['IF_LOAD_MAT'] = 0
+    config['IF_SAVE_MAT'] = 1
+
+    for i_simul in range(0, 50):
+        print('trial', i_simul)
+
         config['Iext'] = [14.0]
-        config['FILE_NAME'] = name + "2_first_I0_14.00_id_%d" % (i_simul)
+        config['FILE_NAME'] = name + "_close_I0_14.00_id_%d" % (i_simul)
         model = Network(**config)
         model.run()
 
+        if config['IF_LOAD_MAT'] == 0:
+            config['IF_LOAD_MAT'] = 1
+            config['IF_SAVE_MAT'] = 0
+
         config['Iext'] = [26.0]
-        config['FILE_NAME'] = name + "2_first_I0_26.00_id_%d" % (i_simul)
+        config['FILE_NAME'] = name + "_close_I0_26.00_id_%d" % (i_simul)
         model = Network(**config)
         model.run()

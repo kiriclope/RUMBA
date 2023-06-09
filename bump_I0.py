@@ -15,6 +15,9 @@ if __name__ == "__main__":
     I0_LIST = np.arange(10, 28, 2)
 
     config['verbose'] = 0
+    config['IF_LOAD_MAT'] = 0
+    config['IF_SAVE_MAT'] = 1
+
     for i_simul in range(0, 250):
         for I0 in I0_LIST:
             print('trial', i_simul, 'I0', I0)
@@ -23,6 +26,10 @@ if __name__ == "__main__":
             config['FILE_NAME'] = name + "_I0_%.2f_id_%d" % (I0, i_simul)
             model = Network(**config)
             model.run()
+
+            if config['IF_LOAD_MAT'] == 0:
+                config['IF_LOAD_MAT'] = 1
+                config['IF_SAVE_MAT'] = 0
 
     end = perf_counter()
     print("Elapsed (with compilation) = {}s".format((end - start)))

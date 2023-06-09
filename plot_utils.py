@@ -18,7 +18,7 @@ plt.rc("axes.spines", top=False, right=False)
 
 golden_ratio = (5**.5 - 1) / 2
 width = 7.5
-matplotlib.rcParams['figure.figsize'] = [width, width * golden_ratio ]
+matplotlib.rcParams['figure.figsize'] = [width, golden_ratio * width ]
 
 pal = [sns.color_palette("tab10")[0], sns.color_palette("tab10")[1]]
 
@@ -472,7 +472,7 @@ def bump_diff(filename, config, n_sim=250, ipal=0):
     # plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True)
 
     plt.ylabel('Density')
-    plt.xlabel('End Location (°)')
+    plt.xlabel('Bump Center Endpoint (°)')
 
 def bump_diff_thresh(filename, config, n_sim=250, ipal=0):
 
@@ -611,8 +611,8 @@ def bump_drift(filename, config, n_sim=250, ipal=0):
     name = filename
 
     phase_lists = []
-    # cue_list = [90, 180, 270]
-    cue_list = [45, 90, 180, 135, 225, 270, 315]
+    cue_list = [180]
+    # cue_list = [45, 90, 180, 135, 225, 270, 315]
 
     for cue in cue_list:
         phase_list = []
@@ -720,8 +720,8 @@ def bump_drift_cue_time(filename, config, n_sim=250):
     name = filename
 
     phase_lists = []
-    # cue_list = [90, 180, 270]
-    cue_list = [45, 90, 180, 135, 225, 270, 315]
+    cue_list = [180]
+    # cue_list = [45, 90, 180, 135, 225, 270, 315]
     # list_cues = [135, 225, 315]
 
     for cue in cue_list:
@@ -753,7 +753,7 @@ def bump_drift_cue_time(filename, config, n_sim=250):
 
     plt.figure('diffusion_time')
     for i in range(len(cue_list)):
-        plt.plot(times, phase_lists[i].T, alpha=.1)
+        plt.plot(times, phase_lists[i].T, alpha=.25, lw=4)
 
     plt.fill_between([1, 1.5], y1=180, y2=-180, alpha=.1)
     plt.ylabel('Phase (°)')

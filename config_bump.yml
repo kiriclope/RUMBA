@@ -1,4 +1,4 @@
-verbose: 0
+verbose: 1
 SAVE: 1
 
 DT: 0.001
@@ -10,8 +10,8 @@ T_WINDOW: .05
 T_STIM_ON: 2.0
 T_STIM_OFF: 2.5
 
-I0: [20.0, 0.]
-I1: [0.0, 0.0]
+I0: [1.0, 0.]
+I1: [0.1, 0.0]
 
 PHI0: 180.0
 SIGMA0: 1.0
@@ -25,7 +25,7 @@ TF_GAIN: 1.0
 
 N_POP: 1
 N: 1000
-K: 100.0
+K: 1.0
 frac: [1.0]
 
 SYN_DYN: 0
@@ -66,7 +66,7 @@ IF_SAVE_MAT: 1
 
 SEED: 10
 STRUCTURE: ['all_cos']
-SIGMA: [1.0]
+SIGMA: [0.0]
 KAPPA: [0.4]
 PHASE: 180.0
 

@@ -158,8 +158,8 @@ class Network:
 
         self.SAVE = const.SAVE
         self.verbose = const.verbose
-        if self.verbose:
-            print(kwargs.keys())
+        # if self.verbose:
+        #     print(kwargs.keys())
 
         self.FILE_NAME = const.FILE_NAME
         self.TF_NAME = const.TF_NAME
@@ -283,6 +283,10 @@ class Network:
 
         if self.verbose:
             print('SIGMA', self.SIGMA)
+
+        if self.verbose:
+            print('KAPPA', self.KAPPA)
+
         self.SIGMA = self.SIGMA / np.abs(self.Jab)
 
         self.GAIN = const.GAIN
@@ -495,7 +499,7 @@ class Network:
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
                 Cab = generate_Cab(self.Ka[j_pre], self.Na[i_post], self.Na[j_pre],
-                    self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED, self.PHASE)
+                                   self.STRUCTURE[i_post, j_pre], self.SIGMA[i_post, j_pre], self.KAPPA[i_post, j_pre], self.SEED, self.PHASE, self.verbose)
                 Cij[self.csumNa[i_post]:self.csumNa[i_post+1], self.csumNa[j_pre]:self.csumNa[j_pre+1]] = Cab
 
         self.Cij = Cij
@@ -632,8 +636,9 @@ class Network:
                     #           np.round(np.mean(self.rates[NE:self.csumNa[2]]), 2),
                     #           np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
                     # except:
-                    #     print('time (ms)', np.round(step/self.N_STEPS, 2),
-                    #           'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
+                    if self.verbose:
+                        print('time (ms)', np.round(step/self.N_STEPS, 2),
+                              'rates (Hz)', np.round(np.mean(self.rates[:NE]), 2))
 
                     m1, phase = decode_bump(self.rates[:self.csumNa[1]])
                     amplitudes.append(m1)
@@ -649,7 +654,8 @@ class Network:
                         amplitudes.append(m1)
                         phases.append(phase * 180.0 / np.pi)
 
-                    # print('m1', np.round(amplitudes,2), 'phase', np.round(phases, 2))
+                    if self.verbose:
+                        print('m1', np.round(amplitudes,2), 'phase', np.round(phases, 2))
 
                     running_step = 0
 
