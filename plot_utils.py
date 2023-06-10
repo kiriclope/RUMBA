@@ -466,13 +466,47 @@ def bump_diff(filename, config, n_sim=250, ipal=0):
     phase_list = np.array(phase_list)
 
     plt.figure('diffusion_hist')
-    plt.hist(phase_list, histtype='step', bins='auto', density=True, color=pal[ipal], lw=5)
-    # plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
-
-    # plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True)
+    plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True, color=pal[ipal])
+    print('precision bias', np.nanstd(phase_list - np.nanmean(phase_list)))
 
     plt.ylabel('Density')
-    plt.xlabel('Bump Center Endpoint (°)')
+    plt.xlabel('Bump Corrected Endpoint (°)')
+
+def bump_accuracy(filename, config, n_sim=250, ipal=0):
+
+    name = filename
+
+    phase_list = []
+    m1_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            phase = phase * 180.0 / np.pi - 180.0
+            # if abs(phase)>10:
+            #   phase = np.nan
+            phase_list.append(phase)
+        except:
+            print('error')
+            phase_list.append(np.nan)
+
+    phase_list = np.array(phase_list)
+
+    plt.figure('accuracy_hist')
+    plt.hist(phase_list, histtype='step', bins='auto', density=True, color=pal[ipal], lw=5)
+    plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
+
+    plt.ylabel('Density')
+    plt.xlabel('Bump Endpoint (°)')
 
 def bump_diff_thresh(filename, config, n_sim=250, ipal=0):
 

@@ -2,7 +2,7 @@ verbose: 1
 SAVE: 1
 
 DT: 0.001
-DURATION: 4.5
+DURATION: 5.0
 
 T_STEADY: 1.0
 T_WINDOW: .05
@@ -11,7 +11,7 @@ T_STIM_ON: 2.0
 T_STIM_OFF: 2.5
 
 I0: [1.0, 0.]
-I1: [0.1, 0.0]
+I1: [0.05, 0.0]
 
 PHI0: 180.0
 SIGMA0: 1.0
@@ -72,3 +72,4 @@ PHASE: 180.0
 
 TOLERANCE: 1.e-12
 MAXITER: 100
+

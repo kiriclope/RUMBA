@@ -326,7 +326,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHA
         # else:
         #     Pij[:, :] = cos_ij
 
-    if "cos" in STRUCTURE:
+    if "ring" in STRUCTURE:
         if verbose:
             print('with strong cosine structure')
         Pij[:, :] = Pij * np.float64(KAPPA)

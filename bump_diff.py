@@ -16,19 +16,21 @@ if __name__ == "__main__":
     config['IF_LOAD_MAT'] = 0
     config['IF_SAVE_MAT'] = 1
 
-    for i_simul in range(0, 50):
-        print('trial', i_simul)
+    config['DPHI'] = .25
 
-        config['Iext'] = [14.0]
-        config['FILE_NAME'] = name + "_close_I0_14.00_id_%d" % (i_simul)
-        model = Network(**config)
-        model.run()
+    for i_simul in range(0, 100):
+        print('trial', i_simul)
 
         if config['IF_LOAD_MAT'] == 0:
             config['IF_LOAD_MAT'] = 1
             config['IF_SAVE_MAT'] = 0
 
+        config['Iext'] = [14.0]
+        config['FILE_NAME'] = name + "_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        model = Network(**config)
+        model.run()
+
         config['Iext'] = [26.0]
-        config['FILE_NAME'] = name + "_close_I0_26.00_id_%d" % (i_simul)
+        config['FILE_NAME'] = name + "_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
         model = Network(**config)
         model.run()
