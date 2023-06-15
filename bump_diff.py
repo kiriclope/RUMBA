@@ -16,7 +16,7 @@ if __name__ == "__main__":
     config['IF_LOAD_MAT'] = 0
     config['IF_SAVE_MAT'] = 1
 
-    config['DPHI'] = .25
+    config['DPHI'] = 1
 
     for i_simul in range(0, 100):
         print('trial', i_simul)
@@ -25,12 +25,54 @@ if __name__ == "__main__":
             config['IF_LOAD_MAT'] = 1
             config['IF_SAVE_MAT'] = 0
 
+        # config['I1'] = [0.0, 0.0]
+
+        # config['Iext'] = [14.0]
+        # config['FILE_NAME'] = name + "ND_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        # config['Iext'] = [24.0]
+        # config['FILE_NAME'] = name + "ND_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        # config['Iext'] = [26.0]
+        # config['FILE_NAME'] = name + "ND_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        config['I1'] = [0.075, 0.0]
+        # config['DPHI'] = 1
+
+        # config['Iext'] = [14.0]
+        # config['FILE_NAME'] = name + "2_far_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        # config['Iext'] = [24.0]
+        # config['FILE_NAME'] = name + "2_far_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        # config['Iext'] = [26.0]
+        # config['FILE_NAME'] = name + "2_far_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        # model = Network(**config)
+        # model.run()
+
+        config['DPHI'] = .25
+
         config['Iext'] = [14.0]
-        config['FILE_NAME'] = name + "_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        config['FILE_NAME'] = name + "2_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        model = Network(**config)
+        model.run()
+
+        config['Iext'] = [24.0]
+        config['FILE_NAME'] = name + "2_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
         model = Network(**config)
         model.run()
 
         config['Iext'] = [26.0]
-        config['FILE_NAME'] = name + "_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
+        config['FILE_NAME'] = name + "2_close_I0_%.2f_id_%d" % (config['Iext'][0], i_simul)
         model = Network(**config)
         model.run()

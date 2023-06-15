@@ -68,6 +68,7 @@ def get_df(filename, configname='config.yml'):
 
     # print(Na)
     df = pd.read_hdf('./simul/' + filename + '.h5', mode='r')
+    df = df[df.time<=3.5]
 
     df_E = df[df.neurons<Na[0]]
     df_EE = []
@@ -436,7 +437,7 @@ def line_phase(df):
     ax[2].hlines(0, 0, 2.5, color='k', ls='--')
     ax[2].hlines(-(180-.25*180-180), 2.5, 4.5, color='k', ls='--')
 
-def bump_diff(filename, config, n_sim=250, ipal=0):
+def bump_diff(filename, config, n_sim=250, ipal=0, THRESH=20):
 
     name = filename
 
@@ -448,16 +449,15 @@ def bump_diff(filename, config, n_sim=250, ipal=0):
         try:
             df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
 
+            df_E = df_E[df_E.time<=3.5]
             times = df_E.time.unique()
             n_times = len(times)
             n_neurons = len(df_E.neurons.unique())
-          
+
             array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
             m1, phase = decode_bump(array[-1])
-        
+
             phase = phase * 180.0 / np.pi - 180.0
-            # if abs(phase)>10:
-            #   phase = np.nan
             phase_list.append(phase)
         except:
             print('error')
@@ -465,14 +465,57 @@ def bump_diff(filename, config, n_sim=250, ipal=0):
 
     phase_list = np.array(phase_list)
 
+    phase_list = phase_list - np.nanmean(phase_list)
+    phase_list = phase_list[np.abs(phase_list)<THRESH]
+
     plt.figure('diffusion_hist')
-    plt.hist(phase_list - np.nanmean(phase_list), histtype='step', bins='auto', density=True, color=pal[ipal])
-    print('precision bias', np.nanstd(phase_list - np.nanmean(phase_list)))
+    plt.hist(phase_list, histtype='step', bins=10, density=True, color=pal[ipal])
+    print('precision bias', np.nanstd(phase_list))
+
+    plt.ylabel('Density')
+    plt.xlabel('Bump Corrected Endpoint (°)')
+    plt.xlim([-THRESH, THRESH])
+
+def bump_abs_diff(filename, config, n_sim=250, ipal=0, THRESH=20):
+
+    name = filename
+
+    phase_list = []
+    m1_list = []
+
+    for i_simul in range(n_sim):
+
+        try:
+            df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+
+            df_E = df_E[df_E.time<=3.5]
+            times = df_E.time.unique()
+            n_times = len(times)
+            n_neurons = len(df_E.neurons.unique())
+
+            array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+            m1, phase = decode_bump(array[-1])
+
+            phase = phase * 180.0 / np.pi - 180.0
+            phase_list.append(phase)
+        except:
+            print('error')
+            phase_list.append(np.nan)
+
+    phase_list = np.array(phase_list)
+
+    phase_list = np.abs(phase_list - np.nanmean(phase_list))
+    phase_list = phase_list[phase_list<=THRESH]
+
+    plt.figure('diffusion_hist')
+    plt.hist(phase_list, histtype='step', bins='auto', density=True, color=pal[ipal])
+    plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
+    print('precision bias', np.nanstd(phase_list))
 
     plt.ylabel('Density')
     plt.xlabel('Bump Corrected Endpoint (°)')
 
-def bump_accuracy(filename, config, n_sim=250, ipal=0):
+def bump_accuracy(filename, config, n_sim=250, ipal=0, THRESH=20):
 
     name = filename
 
@@ -492,21 +535,20 @@ def bump_accuracy(filename, config, n_sim=250, ipal=0):
             m1, phase = decode_bump(array[-1])
 
             phase = phase * 180.0 / np.pi - 180.0
-            # if abs(phase)>10:
-            #   phase = np.nan
             phase_list.append(phase)
         except:
             print('error')
             phase_list.append(np.nan)
 
     phase_list = np.array(phase_list)
+    phase_list = phase_list[np.abs(phase_list)<=THRESH]
 
     plt.figure('accuracy_hist')
     plt.hist(phase_list, histtype='step', bins='auto', density=True, color=pal[ipal], lw=5)
     plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
 
     plt.ylabel('Density')
-    plt.xlabel('Bump Endpoint (°)')
+    plt.xlabel('Bump Center Endpoint (°)')
 
 def bump_diff_thresh(filename, config, n_sim=250, ipal=0):
 
@@ -754,9 +796,9 @@ def bump_drift_cue_time(filename, config, n_sim=250):
     name = filename
 
     phase_lists = []
-    cue_list = [180]
+    cue_list = [135]
     # cue_list = [45, 90, 180, 135, 225, 270, 315]
-    # list_cues = [135, 225, 315]
+    # cue_list = [45, 90, 180, 135, 225, 270, 315]
 
     for cue in cue_list:
         phase_list = []
@@ -779,6 +821,10 @@ def bump_drift_cue_time(filename, config, n_sim=250):
                 print("error", name + "_cue_%d_id_%d" % (cue, i_simul), "not found")
                 phase_list.append(np.nan)
 
+
+        phase_list = phase_list - np.nanmean(phase_list, axis=1)[40]
+
+        print(np.argwhere(times==2))
         phase_lists.append(phase_list)
 
     phase_lists = np.array(phase_lists)
