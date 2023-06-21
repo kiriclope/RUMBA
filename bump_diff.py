@@ -24,8 +24,8 @@ if __name__ == "__main__":
             config['IF_LOAD_MAT'] = 1
             config['IF_SAVE_MAT'] = 0
 
-        name = 'distractor'
-        distance = 'far'
+        name = 'dist'
+        distance = 'close'
 
         config['Iext'] = [24.0]
 

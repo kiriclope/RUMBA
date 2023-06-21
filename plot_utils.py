@@ -11,7 +11,7 @@ from scipy.stats import f_oneway
 from joblib import Parallel, delayed
 import scipy.stats as stat
 
-from bootstrap import my_boots_ci
+from my_bootstrap import my_boots_ci
 
 from decode import circcvl, decode_bump
 sns.set_context("poster")
@@ -439,12 +439,32 @@ def line_phase(df):
     ax[2].hlines(0, 0, 2.5, color='k', ls='--')
     ax[2].hlines(-(180-.25*180-180), 2.5, 4.5, color='k', ls='--')
 
+def decode_loop(name, config, i_simul):
+    try:
+        df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config)
+
+        # if 'far' in name:
+        # df = df[df.time<=3.5]
+
+        times = df_E.time.unique()
+        n_times = len(times)
+        n_neurons = len(df_E.neurons.unique())
+
+        array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
+        m1, phase = decode_bump(array[-1])
+        m1 = m1 / np.nanmean(array[-1])
+    except:
+        m1 = np.nan
+        phase = np.nan
+
+    return m1, phase
+
 def diff_loop(name, config, i_simul):
     try:
         df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config)
 
-        if 'far' in name:
-          df = df[df.time<=3.5]
+        # if 'far' in name:
+        # df = df[df.time<=3.5]
 
         times = df_E.time.unique()
         n_times = len(times)
@@ -474,7 +494,7 @@ def diff_loop_time(name, config, i_simul):
 
     return phase, times
 
-def get_phase(filename, config, n_sim=250, THRESH=20):
+def get_phase(filename, config, n_sim=250, THRESH=20, sign=1):
 
     name = filename
     phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
@@ -483,11 +503,32 @@ def get_phase(filename, config, n_sim=250, THRESH=20):
     phase_list = phase_list - np.nanmean(phase_list)
     print('shape', phase_list.shape)
 
-    name2 = 'bump2' + filename[4:]
+    name2 = 'distractor2' + filename[10:]
     phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
-    phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
+    phase_list2 = sign * (np.array(phase_list2) * 180.0 / np.pi - 180)
     phase_list2[np.abs(phase_list2)>THRESH] = np.nan
+
     phase_list2 = phase_list2 - np.nanmean(phase_list2)
+    print('shape', phase_list2.shape)
+
+    phase_list = np.hstack((phase_list, phase_list2))
+    print('shape', phase_list.shape)
+
+    return phase_list
+
+def get_acc(filename, config, n_sim=250, THRESH=20):
+
+    name = filename
+    phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
+    phase_list = -(np.array(phase_list) * 180.0 / np.pi - 180)
+    phase_list[np.abs(phase_list)>THRESH] = np.nan
+    print('shape', phase_list.shape)
+
+    name2 = 'distractor2' + filename[10:]
+    phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
+    phase_list2 = (np.array(phase_list2) * 180.0 / np.pi - 180)
+    phase_list2[np.abs(phase_list2)>THRESH] = np.nan
+
     print('shape', phase_list2.shape)
 
     phase_list = np.hstack((phase_list, phase_list2))
@@ -504,7 +545,7 @@ def bump_diff(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
     phase_list = phase_list - np.nanmean(phase_list)
     print('shape', phase_list.shape)
 
-    # name2 = 'bump2' + filename[4:]
+    # name2 = 'distractor2' + filename[10:]
     # phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
     # phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
     # phase_list2 = phase_list2[np.abs(phase_list2)<=THRESH]
@@ -523,18 +564,18 @@ def bump_diff(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
     plt.xlim([-THRESH, THRESH])
 
     # bins = np.linspace(-THRESH, THRESH, n_sim)
-    mu_, sigma_ = stat.norm.fit(phase_list)
+    mu_, sigma_ = stat.norm.fit(phase_list[~np.isnan(phase_list)])
     fit_ = stat.norm.pdf(bins, mu_, sigma_)
     plt.plot(bins, fit_, color=pal[ipal], lw=5)
 
 def bump_diff_off_on(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
 
-    bump_diff(filename + '_I0_14.00', config, n_sim, 0, THRESH, bins)
+    bump_diff(filename + '_I0_12.00', config, n_sim, 0, THRESH, bins)
     bump_diff(filename + '_I0_24.00', config, n_sim, 1, THRESH, bins)
 
     plt.savefig(filename + '.svg', dpi=300)
 
-def bump_acc_off_on(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
+def bump_acc_off_on(filename, config, n_sim=250, THRESH=20, bins='auto'):
 
     fig, ax = plt.subplots(num='accuracy_hist')
 
@@ -568,21 +609,21 @@ def bump_accuracy(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto', a
     phase_list = phase_list[np.abs(phase_list)<=THRESH]
     print('shape', phase_list.shape)
 
-    # name2 = 'bump2' + filename[4:]
-    # phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
-    # phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
-    # phase_list2 = -phase_list2[np.abs(phase_list2)<=THRESH]
-    # phase_list2 = phase_list2 - np.nanmean(phase_list2)
-    # print('shape', phase_list2.shape)
+    name2 = 'distractor2' + filename[10:]
+    phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
+    phase_list2 = -(np.array(phase_list2) * 180.0 / np.pi - 180)
+    phase_list2[np.abs(phase_list2)>THRESH] = np.nan
+    phase_list2 = phase_list2 - np.nanmean(phase_list2)
+    print('shape', phase_list2.shape)
 
-    # phase_list = np.hstack((phase_list, phase_list2))
-    # print('shape', phase_list.shape)
+    phase_list = np.hstack((phase_list, phase_list2))
+    print('shape', phase_list.shape)
 
     if ax is None:
         fig, ax = plt.subplots(num='accuracy_hist')
 
     _, bins, _ = plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal], lw=5, alpha=0.5)
-    mu_, sigma_ = stat.norm.fit(phase_list)
+    mu_, sigma_ = stat.norm.fit(phase_list[~np.isnan(phase_list)])
     fit_ = stat.norm.pdf(bins, mu_, sigma_)
     plt.plot(bins, fit_, color=pal[ipal], lw=5)
 
@@ -609,8 +650,8 @@ def bump_diff_thresh(filename, config, n_sim=250, ipal=0):
 
         off = drift[np.abs(drift)<thresh]
         drift_list.append(np.nanmean(off))
-        _, ci_off = my_boots_ci(off, np.nanmean, verbose=0, n_samples=1000)
-        per_list.append(ci_off[0])
+        ci_off = my_boots_ci(off, np.nanmean, n_samples=1000)
+        per_list.append(ci_off)
 
     per_list = np.array(per_list).T
     plt.plot(THRESH_LIST, drift_list, color=pal[ipal])
@@ -634,9 +675,9 @@ def bump_diff_perf(filename, config, n_sim=250, ipal=0):
 
         off = np.nansum(np.abs(drift)<thresh) / drift.shape[0]
         drift_list.append(off)
-        _, ci_off = my_boots_ci(np.abs(drift)<thresh, np.nansum, verbose=0, n_samples=1000)
+        ci_off = my_boots_ci(np.abs(drift)<thresh, n_samples=1000)
 
-        per_list.append(ci_off[0] / drift.shape[0])
+        per_list.append(ci_off / drift.shape[0])
 
     per_list = np.array(per_list).T
     plt.plot(THRESH_LIST, drift_list, color=pal[ipal])
@@ -975,69 +1016,47 @@ def bump_I0(filename, config, n_sim=250):
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(10, 32, 2)
-    # I0_list = np.arange(24, 62, 2)
+    I0_list = np.arange(10, 30, 2)
+
+    phase_ci = []
+    m1_ci = []
 
     for I0 in I0_list:
 
         phase_list = []
         m1_list = []
 
-        phase_ci = []
-        m1_ci = []
+        m1_list, phase_list = zip(*Parallel(n_jobs=-1)(delayed(decode_loop)(name + "_I0_%.2f" % I0, config, i_simul) for i_simul in range(n_sim)))
+        phase_list = np.array(phase_list) * 180.0 / np.pi / 2.5
 
-        for i_simul in range(n_sim):
-            try :
-                df, df_E, df_I = get_df(name + "_I0_%.2f_id_%d" % (I0, i_simul), config + '.yml')
-
-                times = df_E.time.unique()
-                n_times = len(times)
-                n_neurons = len(df_E.neurons.unique())
-
-                array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-                m1, phase = decode_bump(array[-1])
-
-                phase = phase * 180.0 / np.pi
-                m1 = m1 / np.nanmean(array[-1])
-
-                phase_list.append(phase)
-                m1_list.append(m1)
-            except:
-                phase_list.append(np.nan)
-                m1_list.append(np.nan)
-
-        _, cim = my_boots_ci(np.array(m1_list), np.nanmean, verbose=0, n_samples=1000)
-        _, cip = my_boots_ci(np.array(phase_list), np.nanvar, verbose=0, n_samples=1000)
-
-        m1_ci.append(cim[0])
-        phase_ci.append(cip[0])
+        # print(len(phase_list), np.nanvar(phase_list))
+        print(len(m1_list), np.nanmean(m1_list), len(phase_list), np.nanvar(phase_list))
 
         var_list.append(np.nanvar(phase_list))
         M1_list.append(np.nanmean(m1_list))
 
-    var_list = np.array(var_list) / 2.0
-    M1_list = np.array(M1_list)
-    m1_ci = np.array(m1_ci).T
+        cim = my_boots_ci(m1_list, np.nanmean, n_samples=1000)
+        cip = my_boots_ci(phase_list, np.nanvar, n_samples=1000)
+
+        # print(len(cim), len(cip))
+
+        m1_ci.append(cim)
+        phase_ci.append(cip)
+
+    var_list = np.array(var_list)
     phase_ci = np.array(phase_ci).T
 
-    # plt.figure('diff_I0')
-    # plt.plot(I0_list, var_list)
-    # plt.ylabel('Diffusion (°)')
-    # plt.xlabel('FF Input (a.u.)')
+    M1_list = np.array(M1_list)
+    m1_ci = np.array(m1_ci).T
 
-    # plt.savefig(filename + '_diff_I0.svg', dpi=300)
-
+    print(phase_ci.shape)
     plt.figure('m1_I0')
     plt.plot(I0_list, M1_list)
     plt.ylabel('Rel. Bump Amplitude')
     plt.xlabel('FF Input (a.u.)')
-
+    plt.ylim([0.5, 1])
+    plt.yticks([0.5, 0.75, 1])
     plt.savefig(filename + '_m1_I0.svg', dpi=300)
-
-    # plt.figure('corr_I0')
-    # plt.scatter(M1_list, var_list)
-    # plt.ylabel('Rel. Bump Amplitude')
-    # plt.xlabel('Diffusion ($\text{deg}^2$/$s$)')
 
     fig, ax1 = plt.subplots()
     ax1.plot(I0_list, var_list, color='black')
@@ -1050,6 +1069,7 @@ def bump_I0(filename, config, n_sim=250):
     ax2.set_ylabel('Rel. Bump Amplitude', color='grey')
     ax2.tick_params(axis='y', labelcolor='grey')
     ax2.set_ylim([0.5, 1])
+    ax2.set_yticks([0.5, 0.75, 1])
     ax2.fill_between(I0_list, M1_list-m1_ci[0], M1_list + m1_ci[1], alpha=0.2)
 
     plt.savefig(filename + '_all_I0.svg', dpi=300)

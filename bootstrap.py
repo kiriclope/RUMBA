@@ -1,5 +1,5 @@
 import numpy as np
-# from sklearn.utils import resample
+from sklearn.utils import resample
 from joblib import Parallel, delayed
 
 import progressbar as pgb
@@ -8,7 +8,7 @@ import progressbar as pgb
 def bootstrap_parloop(X, statfunc):
     np.random.seed(None)
     # Sample (with replacement) from the given dataset
-    # X_sample = resample(X.copy(), n_samples=X.shape[0])
+    X_sample = resample(X.copy(), n_samples=X.shape[0])
     # Calculate user-defined statistic and store it
     res = statfunc(X_sample)
 

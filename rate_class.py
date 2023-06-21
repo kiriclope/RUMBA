@@ -320,7 +320,7 @@ class Network:
         self.I0 = np.array(const.I0, dtype=np.float64)
         self.I0 *= self.M0 # * np.sqrt(self.Ka[0])
 
-        self.I1 = np.array(const.I1, dtype=np.float64)
+        self.I1 = np.random.normal(const.I1, np.sqrt(2.0 * np.array(const.I1)))
         self.I1 *= self.M0 # * np.sqrt(self.Ka[0])
 
         if const.PHI0 == 'None':
