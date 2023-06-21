@@ -60,8 +60,8 @@ def get_lif():
     return df_E
 
 
-def get_df(filename, configname='config.yml'):
-    config = safe_load(open(configname, "r"))
+def get_df(filename, configname='config_bump'):
+    config = safe_load(open(configname + '.yml', "r"))
     const = Bunch(config)
 
     Na = []
@@ -70,7 +70,7 @@ def get_df(filename, configname='config.yml'):
 
     # print(Na)
     df = pd.read_hdf('./simul/' + filename + '.h5', mode='r')
-    df = df[df.time<=3.5]
+    # df = df[df.time<=3.5]
 
     df_E = df[df.neurons<Na[0]]
     df_EE = []
@@ -92,8 +92,8 @@ def plot_con(Cij):
 
     fig = plt.figure(figsize=(13, 13))
     gs = fig.add_gridspec(2, 2,  width_ratios=(4, 1), height_ratios=(1, 4),
-        left=0.1, right=0.9, bottom=0.1, top=0.9,
-        wspace=0.15, hspace=0.15)
+                          left=0.1, right=0.9, bottom=0.1, top=0.9,
+                          wspace=0.15, hspace=0.15)
     # Create the Axes.
     ax = fig.add_subplot(gs[1, 0])
     ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
@@ -441,9 +441,11 @@ def line_phase(df):
 
 def diff_loop(name, config, i_simul):
     try:
-        df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
+        df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config)
 
-        df_E = df_E[df_E.time<=3.5]
+        if 'far' in name:
+          df = df[df.time<=3.5]
+
         times = df_E.time.unique()
         n_times = len(times)
         n_neurons = len(df_E.neurons.unique())
@@ -452,16 +454,13 @@ def diff_loop(name, config, i_simul):
         _, phase = decode_bump(array[-1])
 
     except:
-        print('error')
         phase = np.nan
 
     return phase
 
 def diff_loop_time(name, config, i_simul):
     try:
-        df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config + '.yml')
-
-        # df_E = df_E[df_E.time<=3.5]
+        df, df_E, df_I = get_df(name + "_id_%d" % (i_simul), config)
         times = df_E.time.unique()
 
         n_times = len(times)
@@ -471,33 +470,62 @@ def diff_loop_time(name, config, i_simul):
         _, phase = decode_bump(array)
 
     except:
-      pass
-    # print('error')
-    # phase = np.nan
+        pass
 
     return phase, times
+
+def get_phase(filename, config, n_sim=250, THRESH=20):
+
+    name = filename
+    phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
+    phase_list = np.array(phase_list) * 180.0 / np.pi - 180
+    phase_list[np.abs(phase_list)>THRESH] = np.nan
+    phase_list = phase_list - np.nanmean(phase_list)
+    print('shape', phase_list.shape)
+
+    name2 = 'bump2' + filename[4:]
+    phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
+    phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
+    phase_list2[np.abs(phase_list2)>THRESH] = np.nan
+    phase_list2 = phase_list2 - np.nanmean(phase_list2)
+    print('shape', phase_list2.shape)
+
+    phase_list = np.hstack((phase_list, phase_list2))
+    print('shape', phase_list.shape)
+
+    return phase_list
 
 def bump_diff(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
 
     name = filename
     phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
     phase_list = np.array(phase_list) * 180.0 / np.pi - 180
-    phase_list = phase_list - np.nanmean(phase_list)
     phase_list = phase_list[np.abs(phase_list)<=THRESH]
-    print(phase_list.shape)
+    phase_list = phase_list - np.nanmean(phase_list)
+    print('shape', phase_list.shape)
+
+    # name2 = 'bump2' + filename[4:]
+    # phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
+    # phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
+    # phase_list2 = phase_list2[np.abs(phase_list2)<=THRESH]
+    # phase_list2 = phase_list2 - np.nanmean(phase_list2)
+    # print('shape', phase_list2.shape)
+
+    # phase_list = np.hstack((phase_list, phase_list2))
+    # print('shape', phase_list.shape)
 
     plt.figure('diffusion_hist')
-    plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal], lw=5, alpha=0.5)
+    _, bins, _ = plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal], lw=5, alpha=0.5)
     print('precision bias', np.nanstd(phase_list))
 
     plt.ylabel('Density')
     plt.xlabel('Bump Corrected Endpoint (°)')
     plt.xlim([-THRESH, THRESH])
 
-    bins_fit = np.linspace(-THRESH, THRESH, n_sim)
-    mu_, sigma_ = stat.norm.fit(phase_list, floc=0, scale=np.nanstd(phase_list))
-    fit_ = stat.norm.pdf(bins_fit, mu_, sigma_)
-    plt.plot(bins_fit, fit_, color=pal[ipal], lw=5)
+    # bins = np.linspace(-THRESH, THRESH, n_sim)
+    mu_, sigma_ = stat.norm.fit(phase_list)
+    fit_ = stat.norm.pdf(bins, mu_, sigma_)
+    plt.plot(bins, fit_, color=pal[ipal], lw=5)
 
 def bump_diff_off_on(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
 
@@ -506,14 +534,23 @@ def bump_diff_off_on(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'
 
     plt.savefig(filename + '.svg', dpi=300)
 
+def bump_acc_off_on(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
+
+    fig, ax = plt.subplots(num='accuracy_hist')
+
+    bump_accuracy(filename + '_I0_14.00', config, n_sim, 0, THRESH, bins, ax)
+    bump_accuracy(filename + '_I0_24.00', config, n_sim, 1, THRESH, bins, ax)
+
+    plt.savefig(filename + '.svg', dpi=300)
+
 def bump_abs_diff(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
 
     name = filename
     phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
     phase_list = np.array(phase_list) * 180.0 / np.pi - 180
+    phase_list = phase_list[phase_list<=THRESH]
 
     phase_list = np.abs(phase_list - np.nanmean(phase_list))
-    phase_list = phase_list[phase_list<=THRESH]
 
     plt.figure('diffusion_hist')
     plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal])
@@ -523,16 +560,34 @@ def bump_abs_diff(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
     plt.ylabel('Density')
     plt.xlabel('Bump Corrected Endpoint (°)')
 
-def bump_accuracy(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto'):
+def bump_accuracy(filename, config, n_sim=250, ipal=0, THRESH=20, bins='auto', ax=None):
 
     name = filename
     phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name, config, i_simul) for i_simul in range(n_sim))
     phase_list = np.array(phase_list) * 180.0 / np.pi - 180
     phase_list = phase_list[np.abs(phase_list)<=THRESH]
+    print('shape', phase_list.shape)
 
-    plt.figure('accuracy_hist')
-    plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal], lw=5)
-    plt.vlines(np.nanmean(phase_list), 0, .1, ls='--', color=pal[ipal])
+    # name2 = 'bump2' + filename[4:]
+    # phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
+    # phase_list2 = np.array(phase_list2) * 180.0 / np.pi - 180
+    # phase_list2 = -phase_list2[np.abs(phase_list2)<=THRESH]
+    # phase_list2 = phase_list2 - np.nanmean(phase_list2)
+    # print('shape', phase_list2.shape)
+
+    # phase_list = np.hstack((phase_list, phase_list2))
+    # print('shape', phase_list.shape)
+
+    if ax is None:
+        fig, ax = plt.subplots(num='accuracy_hist')
+
+    _, bins, _ = plt.hist(phase_list, histtype='step', bins=bins, density=True, color=pal[ipal], lw=5, alpha=0.5)
+    mu_, sigma_ = stat.norm.fit(phase_list)
+    fit_ = stat.norm.pdf(bins, mu_, sigma_)
+    plt.plot(bins, fit_, color=pal[ipal], lw=5)
+
+    ylim = ax.get_ylim()
+    plt.vlines(np.nanmean(phase_list), 0, ylim[1], ls='--', color=pal[ipal])
 
     plt.ylabel('Density')
     plt.xlabel('Bump Center Endpoint (°)')
@@ -636,13 +691,14 @@ def bump_diff_time(filename, config, n_sim=250):
 
     name = filename
 
-    phase_list = Parallel(n_jobs=-1)(delayed(diff_loop_time)(name, config, i_simul) for i_simul in range(n_sim))
+    phase_list, times = zip(*Parallel(n_jobs=-1)(delayed(diff_loop_time)(name, config, i_simul) for i_simul in range(n_sim)))
     phase_list = np.array(phase_list) * 180.0 / np.pi - 180
     # phase_list = phase_list - np.nanmean(phase_list)
     # phase_list = phase_list[np.abs(phase_list)<=THRESH]
+    times = np.array(times)
 
     plt.figure('diffusion_time')
-    plt.plot(times, phase_list.T, alpha=.25)
+    plt.plot(times.T, phase_list.T, alpha=.25)
     plt.fill_between([1, 1.5], y1=180, y2=-180, alpha=.2)
 
     plt.ylabel('Phase (°)')
