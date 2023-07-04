@@ -64,7 +64,7 @@ IF_STP: 0
 IF_LOAD_MAT: 0
 IF_SAVE_MAT: 1
 
-SEED: 10
+SEED: 1
 STRUCTURE: ['all_cos']
 SIGMA: [0.0]
 KAPPA: [0.4]

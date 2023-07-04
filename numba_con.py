@@ -292,6 +292,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHA
 
     Pij = np.zeros((Na, Nb), dtype=np.float64)
     Cij = np.zeros((Na, Nb), dtype=np.float64)
+    Jij = np.ones((Na, Nb), dtype=np.float64)
 
     if verbose:
         print('random connectivity')
@@ -318,7 +319,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHA
 
         if 'cos' in STRUCTURE:
             Pij[:, :] = cos_ij
-            
+
         # if 'lateral' in STRUCTURE:
         #     cos2_ij = np.cos(2.0 * theta_ij - PHASE) 
         #     print('lateral')
@@ -335,7 +336,7 @@ def generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHA
         if verbose:
             print('with spec cosine structure')
         Pij[:, :] = Pij * KAPPA / np.sqrt(Kb)
-    
+
     elif "gauss" in STRUCTURE:
         Pij[:, :] = gaussian(theta_ij, np.float64(SIGMA))
 

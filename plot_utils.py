@@ -22,7 +22,7 @@ golden_ratio = (5**.5 - 1) / 2
 width = 7.5
 matplotlib.rcParams['figure.figsize'] = [width, golden_ratio * width ]
 
-pal = [sns.color_palette("tab10")[0], sns.color_palette("tab10")[1]]
+pal = [sns.color_palette("tab10")[0], sns.color_palette("tab10")[1], 'k', '000']
 
 class Bunch(object):
   def __init__(self, adict):
@@ -70,7 +70,7 @@ def get_df(filename, configname='config_bump'):
 
     # print(Na)
     df = pd.read_hdf('./simul/' + filename + '.h5', mode='r')
-    # df = df[df.time<=3.5]
+    df = df[df.time<=3.5]
 
     df_E = df[df.neurons<Na[0]]
     df_EE = []
@@ -503,7 +503,9 @@ def get_phase(filename, config, n_sim=250, THRESH=20, sign=1):
     phase_list = phase_list - np.nanmean(phase_list)
     print('shape', phase_list.shape)
 
-    name2 = 'distractor2' + filename[10:]
+    idx = name.index('_')
+    name2 = filename[:idx] + '2' + filename[idx:]
+
     phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
     phase_list2 = sign * (np.array(phase_list2) * 180.0 / np.pi - 180)
     phase_list2[np.abs(phase_list2)>THRESH] = np.nan
@@ -524,7 +526,8 @@ def get_acc(filename, config, n_sim=250, THRESH=20):
     phase_list[np.abs(phase_list)>THRESH] = np.nan
     print('shape', phase_list.shape)
 
-    name2 = 'distractor2' + filename[10:]
+    idx = name.index('_')
+    name2 = filename[:idx] + '2' + filename[idx:]
     phase_list2 = Parallel(n_jobs=-1)(delayed(diff_loop)(name2, config, i_simul) for i_simul in range(n_sim))
     phase_list2 = (np.array(phase_list2) * 180.0 / np.pi - 180)
     phase_list2[np.abs(phase_list2)>THRESH] = np.nan
@@ -773,41 +776,16 @@ def bump_drift_cue_time(filename, config, n_sim=250):
     name = filename
 
     phase_lists = []
-    cue_list = [135]
-    # cue_list = [45, 90, 180, 135, 225, 270, 315]
+    # cue_list = [135]
+    cue_list = [45, 90, 180, 135, 225, 270, 315]
     # cue_list = [45, 90, 180, 135, 225, 270, 315]
 
     for cue in cue_list:
 
         phase_list, times = zip(*Parallel(n_jobs=-1)(delayed(diff_loop_time)(name + "_cue_%d" % cue, config, i_simul) for i_simul in range(n_sim)))
-        phase_list = np.array(phase_list) * 180.0 / np.pi - 180 + cue - 180
+        # phase_list = np.array(phase_list) * 180.0 / np.pi - 180 + cue - 180
+        phase_list = np.array(phase_list) * 180.0 / np.pi - 180
         times = np.array(times)
-        print(times.shape)
-
-        # phase_list = phase_list - np.nanmean(phase_list)
-        # phase_list = phase_list[np.abs(phase_list)<=THRESH]
-
-        # phase_list = []
-        # for i_simul in range(n_sim):
-
-        #     try:
-        #         df, df_E, df_I = get_df(name + "_cue_%d_id_%d" % (cue, i_simul), config + '.yml')
-
-        #         times = df_E.time.unique()
-        #         n_times = len(times)
-        #         n_neurons = len(df_E.neurons.unique())
-
-        #         array = df_E.rates.to_numpy().reshape((n_times, n_neurons))
-        #         m1, phase = decode_bump(array)
-
-        #         phase = phase * 180.0 / np.pi - 180.0
-        #         phase_list.append(phase)
-        #     except:
-        #         print("error", name + "_cue_%d_id_%d" % (cue, i_simul), "not found")
-        #         phase_list.append(np.nan)
-
-        # phase_list = phase_list - np.nanmean(phase_list, axis=1)[40]
-
         phase_lists.append(phase_list)
 
     phase_lists = np.array(phase_lists)
@@ -825,6 +803,46 @@ def bump_drift_cue_time(filename, config, n_sim=250):
     plt.yticks([-180, -90, 0, 90, 180])
 
     plt.savefig(name + '_drift_time.svg', dpi=300)
+
+
+def bump_drift_cue(filename, config, n_sim=250, ipal=0, bins='auto', cue=[], THRESH=20):
+
+    name = filename
+
+    phase_lists = []
+    cue_list = cue
+    # cue_list = [45, 90, 180, 135, 225, 270, 315, 0]
+    # cue_list = [45, 90, 180, 135, 225, 270, 315]
+
+    # for cue in cue_list:
+
+    phase_list = Parallel(n_jobs=-1)(delayed(diff_loop)(name + "_cue_%d" % cue[0], config, i_simul) for i_simul in range(n_sim))
+    # phase_list = np.array(phase_list) * 180.0 / np.pi - 180 + cue - 180
+    phase_list = np.array(phase_list) * 180.0 / np.pi
+    phase_list = phase_list[np.abs(phase_list)<=THRESH] #
+    phase_list = phase_list - np.nanmean(phase_list)
+
+    print(np.nanmean(phase_list))
+
+    # phase_lists.append(phase_list)
+
+    # phase_lists = np.array(phase_lists)
+    # print(phase_lists.shape)
+
+    # phase_list = phase_lists[0]
+    plt.figure('diffusion_hist')
+    _, bins, _ = plt.hist(phase_list, histtype='step', bins=bins, density=True)
+
+    plt.ylabel('Density')
+    plt.xlabel('Corrected Bump Endpoint (°)')
+
+    mu_, sigma_ = stat.norm.fit(phase_list)
+    fit_ = stat.norm.pdf(bins, mu_, sigma_)
+    plt.plot(bins, fit_, color=pal[ipal], lw=5)
+
+    # plt.xticks([-180, -90, 0, 90, 180])
+
+    plt.savefig(name + '_drift_cue.svg', dpi=300)
 
 def J0_J1_space(filename):
 
@@ -1016,7 +1034,7 @@ def bump_I0(filename, config, n_sim=250):
     var_list = []
     M1_list = []
 
-    I0_list = np.arange(10, 30, 2)
+    I0_list = np.arange(12, 28, 2)
 
     phase_ci = []
     m1_ci = []
