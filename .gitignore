@@ -9,6 +9,7 @@
 !*.org
 !MakeFile
 
+!*/
 !/backup/
 !/conf/
 !/notebooks/
