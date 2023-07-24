@@ -62,7 +62,7 @@ IF_STP: 0
 # Connectivity
 ##############
 IF_LOAD_MAT: 0
-IF_SAVE_MAT: 1
+IF_SAVE_MAT: 0
 
 SEED: 1
 STRUCTURE: ['all_cos']
