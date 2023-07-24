@@ -1,7 +1,6 @@
 *
 !.gitignore
 !*.py
-!*.cfg
 !*.txt
 !*.md
 !*.ipynb
@@ -16,18 +15,14 @@
 !/org/
 !/src/
 !/tests/
+!/reports
 
-!/**/*.cfg
-!/**/*.txt
 !/**/*.md
-!/**/*.yml
-!/**/*.c
-!/**/*.cpp
-!/**/*.cu
-!/**/*.h
-!/**/*.hpp
-!/**/*.sh
 !/**/*.py
+!/**/*.txt
+!/**/*.yml
+!/**/*.ipynb
+!/**/*.sh
 !/**/*.org
 !/**/MakeFile
 !/**/*.bak
