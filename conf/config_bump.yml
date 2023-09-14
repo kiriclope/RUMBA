@@ -1,17 +1,21 @@
-verbose: 1
+DATA_PATH: /home/leon/models/rnn_numba/data/simul
+MAT_PATH: /home/leon/models/rnn_numba/data/matrix
+
+VERBOSE: 0
 SAVE: 1
 
 DT: 0.001
 DURATION: 5.0
 
 T_STEADY: 1.0
-T_WINDOW: .05
+T_WINDOW: .5
 
 T_STIM_ON: 2.0
 T_STIM_OFF: 2.5
 
 I0: [1.0, 0.]
-I1: [0.05, 0.0]
+I1: [0.0, 0.0]
+# I1: [0.05, 0.0]
 
 PHI0: 180.0
 SIGMA0: 1.0
@@ -62,7 +66,7 @@ IF_STP: 0
 # Connectivity
 ##############
 IF_LOAD_MAT: 0
-IF_SAVE_MAT: 0
+IF_SAVE_MAT: 1
 
 SEED: 1
 STRUCTURE: ['all_cos']
@@ -72,4 +76,3 @@ PHASE: 180.0
 
 TOLERANCE: 1.e-12
 MAXITER: 100
-

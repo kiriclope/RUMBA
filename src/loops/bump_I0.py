@@ -33,6 +33,6 @@ if __name__ == "__main__":
             config["FILE_NAME"] = name + "_I0_%.2f_id_%d" % (I0, i_simul)
             model = Network(**config)
             model.run()
-
+    
     end = perf_counter()
     print("Elapsed (with compilation) = {}s".format((end - start)))

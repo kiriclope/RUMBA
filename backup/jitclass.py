@@ -1,15 +1,13 @@
 #!/home/leon/mambaforge/bin/python3.8
-from numba import jit, int32, float32, types, typed, typeof
-from numba.experimental import jitclass
-
+import time
 from configparser import ConfigParser
 
-import yaml
-import numpy as np
 import matplotlib.pyplot as plt
-import time
-
+import numpy as np
 import params
+import yaml
+from numba import float32, int32, jit, typed, typeof, types
+from numba.experimental import jitclass
 
 
 @jit

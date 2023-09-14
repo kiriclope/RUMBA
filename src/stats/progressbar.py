@@ -1,6 +1,8 @@
 import contextlib
+
 import joblib
 from tqdm import tqdm
+
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):

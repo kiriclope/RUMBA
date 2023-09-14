@@ -67,7 +67,7 @@ def get_df(filename, configname="config_bump"):
     Na = []
     for i_pop in range(const.N_POP):
         Na.append(int(const.N * const.frac[i_pop]))
-
+    
     # print(Na)
     df = pd.read_hdf("./simul/" + filename + ".h5", mode="r")
     df = df[df.time <= 3.5]
@@ -1166,7 +1166,7 @@ def bump_I0(filename, config, n_sim=250):
             )
         )
         phase_list = np.array(phase_list) * 180.0 / np.pi / 2.5
-
+        
         # print(len(phase_list), np.nanvar(phase_list))
         print(len(m1_list), np.nanmean(m1_list), len(phase_list), np.nanvar(phase_list))
 

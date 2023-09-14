@@ -1,9 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from yaml import safe_load
-from scipy.integrate import quad_vec, quad, quadrature
-from scipy.special import erf, erfc
+import numpy as np
+from scipy.integrate import quad, quad_vec, quadrature
 from scipy.optimize import root
+from scipy.special import erf, erfc
+from yaml import safe_load
 
 
 class Bunch(object):
