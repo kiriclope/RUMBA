@@ -2,6 +2,20 @@ import numpy as np
 
 
 def decode_bump(signal, axis=-1):
+    """
+    Decode a signal to a phase and magnitude representation.
+
+    Parameters:
+    signal (ndarray): Input signal to decode.
+    axis (int): The axis along which the operation is performed. Default is -1.
+    
+    Returns:
+    tuple: Returns a tuple of three elements (m0, m1, phi) where:
+             m0 is the mean of the signal,
+             m1 is magnitude of the Fourier transform of the signal,
+             phi is the phase of the Fourier transform of the signal.
+    """
+    
     signal_copy = signal.copy()
     if axis != -1 and signal.ndim != 1:
         signal_copy = np.swapaxes(signal_copy, axis, -1)
@@ -23,6 +37,18 @@ def decode_bump(signal, axis=-1):
 
 
 def circcvl(signal, windowSize=10, axis=-1):
+    """
+    Compute the circular convolution of a signal with a smooth kernel.
+
+    Parameters:
+    signal (ndarray): The input signal.
+    windowSize (int): The length of the smoothing window. Defaults to 10.
+    axis (int): The axis along which the operation is performed. Default is -1.
+
+    Returns:
+    ndarray: Returns the smoothed signal after circular convolution.
+    """
+    
     signal_copy = signal.copy()
 
     if axis != -1 and signal.ndim != 1:

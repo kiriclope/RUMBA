@@ -1,0 +1,117 @@
+#+STARTUP: fold
+#+TITLE: RNN numba package
+#+PROPERTY: header-args:ipython :results both :exports both :async yes :session dual_data :kernel dual_data
+
+* A few settings
+** autoreload
+#+begin_src ipython
+  %load_ext autoreload
+  %autoreload 2
+  %reload_ext autoreload
+#+end_src
+
+#+RESULTS:
+: The autoreload extension is already loaded. To reload it, use:
+:   %reload_ext autoreload
+
+# Out[1]:
+** project root
+#+begin_src ipython
+  import os
+  import sys
+  current_dir = os.path.dirname(os.path.abspath('__file__'))
+  # Get parent directory (= the project root)
+  project_root = os.path.join(current_dir, '..')
+  # Append to system path
+  sys.path.append(project_root)
+  print(sys.path)
+  
+  print("Python exe")
+  print(sys.executable)
+#+end_src
+
+#+RESULTS:
+: Python exe
+: /home/leon/mambaforge/envs/dual_data/bin/python
+** imports and setting up matplotlib
+#+begin_src ipython
+  import numpy as np
+  import matplotlib
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  import pandas as pd
+  import pickle as pkl
+
+  sns.set_context("poster")
+  sns.set_style("ticks")
+  plt.rc("axes.spines", top=False, right=False)
+  fig_path = '../figs/perf'
+  golden_ratio = (5**.5 - 1) / 2
+  width = 6
+  height = width * golden_ratio
+
+  matplotlib.rcParams['figure.figsize'] = [width, height]
+
+  matplotlib.rcParams['lines.markersize'] = 5
+  %matplotlib inline
+  %config InlineBackend.figure_format = 'png'
+#+end_src
+
+#+RESULTS:
+
+#+begin_src ipython
+  print('a test figure')
+  plt.figure()
+  plt.plot([1,2,3,4], '-o')
+  plt.xlabel('x')
+  # plt.show()
+
+  plt.figure()
+  plt.plot([1,2,3,4], '-o')
+  plt.xlabel('x')
+  # plt.show()
+
+  1+1
+
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: a test figure
+: 2
+[[file:./.ob-jupyter/9f2f984b132c293e11342d9f682c1e582f2cc013.png]]
+[[file:./.ob-jupyter/9f2f984b132c293e11342d9f682c1e582f2cc013.png]]
+:END:
+
+* Continuous rate model
+** imports
+#+begin_src ipython
+  from src.model.rate_model import Network
+#+end_src
+
+#+RESULTS:
+
+** Single trial
+To run a simulation, first we need to define a network model.
+The class Network takes two arguments:
+                1.  the name of the configuration file that defines the model;
+                2. the name of the output file that will contain the simulation data.
+                   
+#+begin_src ipython
+  model = Network('config_bump.yml', 'test')
+#+end_src
+
+#+RESULTS:
+: Loading config from /home/leon/models/rnn_numba/conf/config_bump.yml
+: Saving to /home/leon/models/rnn_numba/data/simul/test.h5
+
+Then one just runs the model with
+#+begin_src ipython
+  model.run()
+#+end_src
+
+#+RESULTS:
+: Generating matrix Cij
+: Saving matrix to /home/leon/models/rnn_numba/data/matrix/Cij.npy
+: Running simulation
+: Elapsed (with compilation) = 6.908852840075269s

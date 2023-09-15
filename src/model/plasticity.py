@@ -3,6 +3,10 @@ from numba import jit
 
 
 class STP_Model():
+    """
+    A Short-Term Plasticity (STP) model class, that provides both the Markram and 
+    Hansel methods for Short-Term Plasticity in synapses.
+    """
 
     def __init__(self, N, DT):
 
