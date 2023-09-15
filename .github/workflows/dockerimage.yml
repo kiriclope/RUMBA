@@ -1,0 +1,18 @@
+name: Publish Docker image
+on:
+  push:
+    branches:
+      - shared
+jobs:
+  push_to_registry:
+    name: Push Docker image to GitHub Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Log in to GitHub Docker Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/rate_model:${{ github.sha }} .
+          docker push ghcr.io/${{ github.repository }}/rate_model:${{ github.sha }}
