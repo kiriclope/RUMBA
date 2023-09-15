@@ -5,8 +5,8 @@ pandas
 seaborn
 numba
 tqdm
-yaml
+pyyaml
 ipython
 jupyter
-pytables
+tables
 h5py
