@@ -100,14 +100,14 @@ class Network:
             self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
             self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
         
-    def __init__(self, conf_file, sim_name, conf_path="/home/leon/models/rnn_numba/conf/", **kwargs):
+    def __init__(self, conf_file, sim_name, repo_path="/home/leon/models/rnn_numba/", **kwargs):
         '''Initialize the Network model with configuration file, simulation name and
         potentially other unspecified keyword arguments.'''
         
-        conf_path = conf_path + conf_file
+        conf_path = repo_path + '/conf/'+ conf_file
         print('Loading config from', conf_path)
         param = safe_load(open(conf_path, "r"))
-
+        
         param["FILE_NAME"] = sim_name
         param.update(kwargs)
 
