@@ -18,7 +18,7 @@ Assuming the dependencies are installed, here is how to run the model (see noteb
 from src.model.rate_model import Network
 
 # initialize model
-model = Network(config_file_name, output_file_name, path_to_config_file, **kwargs)
+model = Network(config_file_name, output_file_name, path_to_repo, **kwargs)
 
 # kwargs can be any of the args in the config file
 
