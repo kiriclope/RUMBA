@@ -1,10 +1,9 @@
 # RNN Simulator with NUMBA
 
 ## Introduction
-Explain what is your project about, the problem it solves, and its uses.
-
-## Requirements
-Highlight the tech, tools, libraries, and Python versions needed to run the project.
+This package provides an implementation of a recurrent neural network simulator with NUMBA.
+The network can have multiple neural populations, different connectivity profiles (all to all, sparse, tuned, ...).
+For more info look at the config files in ./conf
 
 ## Installation
 Provide clear instructions on how to get your development environment running.
@@ -12,29 +11,25 @@ Provide clear instructions on how to get your development environment running.
 pip install -r requirements.txt
 ```
 ## Usage
-Assuming the dependencies are installed, describe how to run the code from command line.
+Assuming the dependencies are installed, here is how to run the model (see notebooks folder or org folder for more doc)
 
 ```python
-python main.py
+# import the network class
+from src.model.rate_model import Network
+
+# initialize model
+model = Network(config_file_name, output_file_name, path_to_config_file, **kwargs)
+
+# kwargs can be any of the args in the config file
+
+# run the model
+model.run()
 ```
 
-## Features
-Talk about what features your project has.
 
 ## Contributing
-If you want others to contribute to your project, providing guidelines may be helpful.
-
-## Tests
-Explain how to run the test suite, if you have one.
-
-```bash
-python -m unittest discover tests
-```
-
-Inform users about the license under which you’re providing the project.
+Feel free to contribute.
 ```
 MIT License
 Copyright (c) [2023] [A. Mahrach]
 ```
-## Credits
-Here you can acknowledge the ones who contributed to the project or if you have based your work on someone else's work, don't forget to credit them.
