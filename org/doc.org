@@ -94,8 +94,10 @@
 ** Single trial
 To run a simulation, first we need to define a network model.
 The class Network takes two arguments:
-                1.  the name of the configuration file that defines the model;
+                1.  the name of the configuration file that defines the model. 
+                   This file is well detailed (check config_bump.yml or config_EI.yml)
                 2. the name of the output file that will contain the simulation data.
+                   The model writes all relevant data to a single dataframe stored in an h5 format
                    
 #+begin_src ipython
   model = Network('config_bump.yml', 'test')

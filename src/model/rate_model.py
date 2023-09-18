@@ -24,7 +24,7 @@ from src.model.connectivity import numba_generate_Cab
 from src.model.plasticity import STP_Model
 
 from src.analysis.decode import decode_bump
-from src.mean_field.mean_field_spec import get_mf_spec, m0_func
+from src.model.mean_field_spec import get_mf_spec, m0_func
 
 
 def pertur_func(theta, I0, SIGMA0, PHI0):
