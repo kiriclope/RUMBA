@@ -415,15 +415,15 @@ from src.analysis.decode import decode_bump
   fig, ax = plt.subplots(1, 2, figsize=[2*width, height])
 
   sns.histplot(data=end_point, x=end_point['accuracy']*180/np.pi, legend=False, lw=2, ax=ax[0])
-  ax[0].set_xlabel('$\phi$ (°)')
+  ax[0].set_xlabel('$\phi - \phi_{stim}$ (°)')
   ax[0].set_ylabel('Count')
 
   sns.histplot(data=end_point, x=end_point['precision']*180/np.pi, legend=False, ax=ax[1], bins='auto', kde=True)
-  ax[1].set_xlabel('$\phi$ (°)')
+  ax[1].set_xlabel('$\phi - <\phi>_{trials}$ (°)')
   ax[1].set_ylabel('$Count$')
 
   plt.show()  
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/bf6022ae6003856f2c35c7a67acc432c791cfbf3.png]]
+[[file:./.ob-jupyter/5d6eab0ddebb8971d2aae4d4ce5972964c671d33.png]]
