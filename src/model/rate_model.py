@@ -84,21 +84,21 @@ class Network:
             self.EXP_DT_TAU_THRESH.append(np.exp(-self.DT / self.TAU_THRESH[i_pop]))
             self.DT_TAU_THRESH.append(self.DT / self.TAU_THRESH[i_pop])
         
-            self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float64)
-            self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float64)
+        self.EXP_DT_TAU_FF = np.array(self.EXP_DT_TAU_FF, dtype=np.float64)
+        self.DT_TAU_FF = np.array(self.DT_TAU_FF, dtype=np.float64)
 
-            self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float64)
-            self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float64)
+        self.EXP_DT_TAU_SYN = np.array(self.EXP_DT_TAU_SYN, dtype=np.float64)
+        self.DT_TAU_SYN = np.array(self.DT_TAU_SYN, dtype=np.float64)
 
-            if self.IF_NMDA:
-                self.EXP_DT_TAU_NMDA = np.array(self.EXP_DT_TAU_NMDA, dtype=np.float64)
-                self.DT_TAU_NMDA = np.array(self.DT_TAU_NMDA, dtype=np.float64)
+        if self.IF_NMDA:
+            self.EXP_DT_TAU_NMDA = np.array(self.EXP_DT_TAU_NMDA, dtype=np.float64)
+            self.DT_TAU_NMDA = np.array(self.DT_TAU_NMDA, dtype=np.float64)
 
-            self.EXP_DT_TAU_MEM = np.array(self.EXP_DT_TAU_MEM, dtype=np.float64)
-            self.DT_TAU_MEM = np.array(self.DT_TAU_MEM, dtype=np.float64)
+        self.EXP_DT_TAU_MEM = np.array(self.EXP_DT_TAU_MEM, dtype=np.float64)
+        self.DT_TAU_MEM = np.array(self.DT_TAU_MEM, dtype=np.float64)
 
-            self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
-            self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
+        self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
+        self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
         
     def __init__(self, conf_file, sim_name, repo_path="/home/leon/models/rnn_numba/", **kwargs):
         '''Initialize the Network model with configuration file, simulation name and
