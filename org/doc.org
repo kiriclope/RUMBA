@@ -19,12 +19,12 @@
 #+begin_src ipython
   import os
   import sys
-  current_dir = os.path.dirname(os.path.abspath('__file__'))
-  # Get parent directory (= the project root)
-  project_root = os.path.join(current_dir, '..')
-  # Append to system path
-  sys.path.append(project_root)
-  print(sys.path)
+  # current_dir = os.path.dirname(os.path.abspath('__file__'))
+  # # Get parent directory (= the project root)
+  # project_root = os.path.join(current_dir, '..')
+  # # Append to system path
+  # sys.path.append(project_root)
+  # print(sys.path)
   
   print("Python exe")
   print(sys.executable)
@@ -86,6 +86,8 @@
 * Continuous rate model
 ** imports
 #+begin_src ipython
+  import sys
+  sys.path.insert(0, '/home/leon/tmp/rnn_numba') # put here the path to the repo
   from src.model.rate_model import Network
 #+end_src
 
@@ -100,12 +102,17 @@ The class Network takes two arguments:
                    The model writes all relevant data to a single dataframe stored in an h5 format
                    
 #+begin_src ipython
-  model = Network('config_bump.yml', 'test')
+  conf_path = "/home/leon/tmp/rnn_numba/conf/"
+  model = Network('config_bump.yml', 'test', conf_path, VERBOSE=1)
 #+end_src
 
 #+RESULTS:
-: Loading config from /home/leon/models/rnn_numba/conf/config_bump.yml
-: Saving to /home/leon/models/rnn_numba/data/simul/test.h5
+: Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+: Saving to /home/leon/tmp/rnn_numba/data/simul/test.h5
+: Jab [[-2.75]]
+: SIGMA [[0.]]
+: KAPPA [[0.4]]
+: Iext [14.]
 
 Then one just runs the model with
 #+begin_src ipython
@@ -113,7 +120,29 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-: Generating matrix Cij
-: Saving matrix to /home/leon/models/rnn_numba/data/matrix/Cij.npy
-: Running simulation
-: Elapsed (with compilation) = 6.908852840075269s
+#+begin_example
+  Generating matrix Cij
+  random connectivity
+  with all to all cosine structure
+  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Parameters:
+  N 1000 Na [1000] K 1.0 Ka [1.]
+  Iext [14.] Jab [-2.75]
+  KAPPA [[0.4]] SIGMA [[0.]]
+  MF Rates: [5.09090909]
+  Running simulation
+  times (s) 0.5 rates (Hz) [2.17]
+  times (s) 1.0 rates (Hz) [2.16]
+  STIM ON
+  times (s) 1.5 rates (Hz) [6.26]
+  STIM OFF
+  times (s) 2.0 rates (Hz) [5.86]
+  times (s) 2.5 rates (Hz) [5.86]
+  CUE ON
+  times (s) 3.0 rates (Hz) [5.88]
+  CUE OFF
+  times (s) 3.5 rates (Hz) [5.9]
+  times (s) 4.0 rates (Hz) [5.87]
+  saving data to /home/leon/tmp/rnn_numba/data/simul/test.h5
+  Elapsed (with compilation) = 7.218026272952557s
+#+end_example

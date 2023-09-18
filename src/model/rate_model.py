@@ -6,6 +6,7 @@ that are user-configurable via a configuration file (conf_file). The
 outputs can be saved in an HDF5 file.'''
 
 import sys
+import os
 from time import perf_counter
 
 import numpy as np
@@ -19,7 +20,7 @@ from src.model.numba_utils import (
     numba_update_rates,
 )
 
-from src.model.utils import Bunch, nd_numpy_to_nested
+from src.model.utils import nd_numpy_to_nested
 from src.model.connectivity import numba_generate_Cab
 from src.model.plasticity import STP_Model
 
@@ -45,11 +46,10 @@ class Network:
         
         self.N_STIM_ON = int(self.T_STIM_ON / self.DT)
         self.N_STIM_OFF = int(self.T_STIM_OFF / self.DT)
-
+        
         self.N_CUE_ON = int((self.T_STIM_ON + 1.5) / self.DT)
         self.N_CUE_OFF = int((self.T_STIM_OFF + 1.5) / self.DT)
-
-
+        
     def set_integration_const(self):
         self.EXP_DT_TAU_SYN = []
         self.DT_TAU_SYN = []
@@ -100,10 +100,11 @@ class Network:
             self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
             self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
         
-    def __init__(self, conf_file, sim_name, **kwargs):
-       '''Initialize the Network model with configuration file, simulation name and potentially other unspecified keyword arguments.'''
-
-        conf_path = "/home/leon/models/rnn_numba/conf/" + conf_file
+    def __init__(self, conf_file, sim_name, conf_path="/home/leon/models/rnn_numba/conf/", **kwargs):
+        '''Initialize the Network model with configuration file, simulation name and
+        potentially other unspecified keyword arguments.'''
+        
+        conf_path = conf_path + conf_file
         print('Loading config from', conf_path)
         param = safe_load(open(conf_path, "r"))
 
@@ -112,10 +113,16 @@ class Network:
 
         for k, v in param.items():
             setattr(self, k, v)
-        
+
         self.FILE_PATH = self.DATA_PATH + "/" + self.FILE_NAME + ".h5"
         print('Saving to', self.FILE_PATH)
-        
+
+        if not os.path.exists(self.DATA_PATH):
+            os.makedirs(self.DATA_PATH)
+            
+        if not os.path.exists(self.MAT_PATH):
+            os.makedirs(self.MAT_PATH)
+
         self.PHASE = self.PHASE * np.pi / 180.0
 
         self.convert_times_to_steps()
@@ -343,7 +350,7 @@ class Network:
                     theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
 
     def generate_Cij(self):
-        '''Generate the connectivity matrix Cij according to the specific regulation rules.'''
+        ''' Generate the connectivity matrix Cij according to the specific regulation rules.'''
         np.random.seed(self.SEED)
         
         Cij = np.zeros((self.N, self.N), dtype=np.float64)
@@ -395,12 +402,12 @@ class Network:
 
         return Cij_NMDA
 
-    def stack_arrays(self, time):
+    def stack_arrays(self, times, stp=None):
         if self.IF_STP:
             if self.N_POP == 2:
                 data_stack = np.vstack(
                     (
-                        time,
+                        times,
                         self.rates,
                         self.ff_inputs,
                         self.inputs,
@@ -413,7 +420,7 @@ class Network:
             else:
                 data_stack = np.vstack(
                         (
-                            time,
+                            times,
                             self.rates,
                             self.ff_inputs,
                             self.inputs,
@@ -424,7 +431,7 @@ class Network:
                 ).T
                 
         else:
-            data_stack = np.vstack((time, self.rates, self.ff_inputs, self.inputs)).T
+            data_stack = np.vstack((times, self.rates, self.ff_inputs, self.inputs)).T
             
         return data_stack
 
@@ -460,7 +467,7 @@ class Network:
         )
 
 
-    def print_activity(self, time):
+    def print_activity(self, times):
         
         activity = []
 
@@ -473,8 +480,8 @@ class Network:
             activity.append(np.round(np.mean(self.rates[self.csumNa[2]:]), 2))
             
         print(
-            "time (s)",
-            np.round(time, 2),
+            "times (s)",
+            np.round(times, 2),
             "rates (Hz)",
             activity,
         )
@@ -482,9 +489,7 @@ class Network:
     def run(self):
         '''Perform the simulation for a series of steps within the specified duration.'''
         start = perf_counter()
-    
-        NE = self.Na[0]
-        
+            
         if self.IF_LOAD_MAT:
             print('Loading matrix from', self.MAT_PATH + "/Cij.npy")
             Cij = np.load(self.MAT_PATH + "/Cij.npy")
@@ -573,18 +578,16 @@ class Network:
             running_step += 1
 
             if step >= self.N_STEADY:
-                time = (step - self.N_STEADY) * self.ones_vec
-                
-                if running_step % self.N_WINDOW == 0:
-                    amplitudes = []
-                    phases = []
+                time_vec = (step - self.N_STEADY) * self.ones_vec
+                times = np.round((step -self.N_STEADY) / self.N_STEPS * self.DURATION, 2)
 
-                    data_stack = self.stack_arrays(time)
+                if running_step % self.N_WINDOW == 0:
+                    data_stack = self.stack_arrays(time_vec)
                     data.append(data_stack)
                                         
                     if self.VERBOSE:
-                        self.print_activity(time)
-                        if 'cos' in self.STRUCTURE:                        
+                        self.print_activity(times)
+                        if 'cos' in self.STRUCTURE:         
                             self.print_tuning()
                         
                     running_step = 0

@@ -1,11 +1,10 @@
 import numpy as np
-from pandas import DataFrame, concat
+import pandas as pd
 
 class Bunch(object):
     def __init__(self, adict):
         self.__dict__.update(adict)
         
-def nd_numpy_to_nested(X, N_POP=2, IF_STP=0):
 def nd_numpy_to_nested(X, N_POP=2, IF_STP=0):
     """
     Convert NumPy ndarray with shape (n_instances, n_columns, n_timepoints)

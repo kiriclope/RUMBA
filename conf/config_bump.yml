@@ -5,9 +5,9 @@
 VERBOSE: 0
 
 # Path to where to save the simulation files
-DATA_PATH: /home/leon/models/rnn_numba/data/simul
+DATA_PATH: /home/leon/tmp/rnn_numba/data/simul
 # Path to where to save/load the connectivity matrix
-MAT_PATH: /home/leon/models/rnn_numba/data/matrix
+MAT_PATH: /home/leon/tmp/rnn_numba/data/matrix
 
 # 1 to save the data to DATA_PATH
 SAVE_DATA: 1
