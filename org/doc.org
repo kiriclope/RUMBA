@@ -210,8 +210,9 @@ Then one just runs the model with
 #+RESULTS:
 
 *** Parameter search
+
 #+begin_src ipython
-  Ie_list = np.linspace(0, 0.5, 6)
+  Ie_list = np.linspace(0.1, 1, 10)
   print(Ie_list)
 
   REPO_ROOT = "/home/leon/tmp/rnn_numba"
@@ -224,9 +225,9 @@ Then one just runs the model with
       print("Ie", Ie)
       print('##########################################')
 
-      model = Network('config_EI.yml', 'bump_Ie_%.2f' % Ie, REPO_ROOT,
+      model = Network('config_EI.yml', 'bump_Ie_%.1f' % Ie, REPO_ROOT,
                       IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
-                      Iext=[Ie, 0.25])
+                      Gain=Ie)
       
       model.run()
 
@@ -237,65 +238,97 @@ Then one just runs the model with
 
 #+RESULTS:
 #+begin_example
-  [0.  0.1 0.2 0.3 0.4 0.5]
-  ##########################################
-  Ie 0.0
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.00.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 36.5184686339926s
+  [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1. ]
   ##########################################
   Ie 0.1
   ##########################################
   Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.10.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.1.h5
+  Generating matrix Cij
+  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 35.279877029010095s
+  Elapsed (with compilation) = 57.59470825298922s
   ##########################################
   Ie 0.2
   ##########################################
   Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.20.h5
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.2.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 32.104306531953625s
+  Elapsed (with compilation) = 58.72569092398044s
   ##########################################
   Ie 0.30000000000000004
   ##########################################
   Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.30.h5
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.3.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 34.06883247499354s
+  Elapsed (with compilation) = 58.357797659002244s
   ##########################################
   Ie 0.4
   ##########################################
   Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.40.h5
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.4.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 29.730740061029792s
+  Elapsed (with compilation) = 58.12026895402232s
   ##########################################
   Ie 0.5
   ##########################################
   Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.50.h5
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.5.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 35.274377859022934s
+  Elapsed (with compilation) = 58.90326176898088s
+  ##########################################
+  Ie 0.6
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.6.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 58.6129756779992s
+  ##########################################
+  Ie 0.7000000000000001
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.7.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 58.70668443996692s
+  ##########################################
+  Ie 0.8
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.8.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 53.72524890798377s
+  ##########################################
+  Ie 0.9
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.9.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 57.952931727981195s
+  ##########################################
+  Ie 1.0
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_1.0.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 57.457209688960575s
 #+end_example
 
 #+begin_src ipython
-  Ie_list = np.linspace(0, 0.5, 6)
+  Ie_list = np.linspace(0.1, 1.0, 10)
 
   df_list = []
   
   for i in range(Ie_list.shape[0]):
-      df_i = pd.read_hdf(REPO_ROOT + "/data/simul/bump_Ie_%.2f.h5" % Ie_list[i], mode="r")
+      df_i = pd.read_hdf(REPO_ROOT + "/data/simul/bump_Ie_%.1f.h5" % Ie_list[i], mode="r")
       df_i['Ie'] = i
       df_list.append(df_i)
 
@@ -306,15 +339,15 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-:           rates        ff           h_E       h_I  neurons   time  Ie
-: 0  1.198471e-14 -1.998538  9.797238e-11 -9.795072        0  0.049   0
-: 1  5.660738e-13  0.335705  5.536981e-11 -8.893878        1  0.049   0
-: 2  8.469961e-14  0.679486  3.987396e-11 -9.128809        2  0.049   0
-: 3  2.210416e-15  0.406449  3.693183e-11 -9.550974        3  0.049   0
-: 4  2.396025e-15 -0.674237  8.298314e-11 -9.423361        4  0.049   0
+:       rates         ff       h_E        h_I  neurons   time  Ie
+: 0  0.368926  12.781403  9.071170 -20.381302        0  0.249   0
+: 1  0.548235  12.137876  8.606775 -19.757314        1  0.249   0
+: 2  0.791355  12.516987  8.236397 -18.628502        2  0.249   0
+: 3  0.659268  10.232158  8.340149 -19.042084        3  0.249   0
+: 4  0.235941   8.420432  8.426077 -20.439227        4  0.249   0
 
 #+begin_src ipython
-  trial = 5
+  trial = 0
   fig, ax = plt.subplots(1, 2, figsize=[2*width, height])
   pt = pd.pivot_table(df[df.Ie==trial], values="rates", index=["neurons"], columns="time")
 
@@ -333,7 +366,7 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/23037c05c2649b6d291d9b2b840672a155953af8.png]]
+[[file:./.ob-jupyter/2ab394c7fca4f3c4c0ff8920d2f93d171cb0b91b.png]]
 
 ** Multiple trials
 *** Simulations

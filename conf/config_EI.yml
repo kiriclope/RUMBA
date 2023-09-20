@@ -105,7 +105,7 @@ M0: 1.0
 
 # To add an attentional switch
 # if BUMP_SWITCH[i] == 1 it sets Iext[i] to zero before stimulus presentation
-BUMP_SWITCH: [1, 0]
+BUMP_SWITCH: [0, 0]
 
 ########################
 # Plasticity

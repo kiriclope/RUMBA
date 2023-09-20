@@ -1,13 +1,13 @@
 ###################################################
 # Parameters 
 ###################################################
+# disable jit compilation
+DISABLE_JIT: 0
+# number of threads for parallel processing
+NUM_THREADS: 116
+
 # output different prompts for debugging purpose
 VERBOSE: 0
-
-# Path to where to save the simulation files
-DATA_PATH: /home/leon/tmp/rnn_numba/data/simul
-# Path to where to save/load the connectivity matrix
-MAT_PATH: /home/leon/tmp/rnn_numba/data/matrix
 
 # 1 to save the data to DATA_PATH
 SAVE_DATA: 1
@@ -102,6 +102,10 @@ Jab: [-2.75]
 Iext: [14.0]
 # External rate
 M0: 1.0
+
+# To add an attentional switch
+# if BUMP_SWITCH[i] == 1 it sets Iext[i] to zero before stimulus presentation
+BUMP_SWITCH: [1]
 
 ####################
 # Plasticity
