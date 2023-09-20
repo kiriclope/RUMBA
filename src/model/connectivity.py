@@ -142,7 +142,7 @@ def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=
 
             if SIGMA>0.0:
                 if verbose:
-                    print('with asymmetry')                
+                    print('with asymmetry')
                 Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb            
         else:
             Cij[:, :] = 1.0 / Nb
@@ -159,9 +159,9 @@ def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=
                 Pij[:, :] = Pij / np.sqrt(Kb)
             else:
                 if verbose:
-                    print('with strong cosine structure')            
+                    print('with strong cosine structure')       
             
-            Pij[:, :] = (Kb / Nb) * (1.0 + 2.0 * Pij)   
+            Pij[:, :] = (Kb / Nb) * (1.0 + 2.0 * Pij)
             Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
         else:
             Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb/Nb)

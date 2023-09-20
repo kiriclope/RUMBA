@@ -225,6 +225,11 @@ def heatmap(df, vmax=20):
     print(df1.head())
     pt = pd.pivot_table(df1, values="rates", index=["neurons"], columns="time")
 
+
+    ax = sns.heatmap(
+        pt, cmap="jet", vmax=vmax, xticklabels=xticks, yticklabels=yticks, lw=0
+    )
+    
     n_ticks = 10
     xticks = []
     yticks = []

@@ -1,9 +1,9 @@
-'''This script sets up and runs a network model. The model contains
+"""This script sets up and runs a network model. The model contains
 adjustable parameters such as model connectivity (Cij), synaptic
 dynamics (SYN_DYN), feedforward dynamics (FF_DYN), and other
 processing details (perturbation functions, threshold dynamics, etc.)
 that are user-configurable via a configuration file (conf_file). The
-outputs can be saved in an HDF5 file.'''
+outputs can be saved in an HDF5 file."""
 
 import sys
 import os
@@ -13,6 +13,7 @@ import numpy as np
 from tqdm import tqdm
 from yaml import safe_load
 from pandas import HDFStore
+from numba import config, set_num_threads
 
 from src.model.numba_utils import (
     numba_update_ff_inputs,
@@ -29,14 +30,14 @@ from src.model.mean_field_spec import get_mf_spec, m0_func
 
 
 def pertur_func(theta, I0, SIGMA0, PHI0):
-    '''Stimulus shape'''
+    """Stimulus shape"""
     res = I0 * (1.0 + SIGMA0 * np.cos(theta - PHI0))
     return res * (res > 0)
 
 
 class Network:
-    '''Network class represents the overarching model that will be simulated. 
-    The model parameters are derived from a given configuration file and are visualized and adjusted at runtime.'''
+    """Network class represents the overarching model that will be simulated. 
+    The model parameters are derived from a given configuration file and are visualized and adjusted at runtime."""
 
     def convert_times_to_steps(self):
         self.N_STEPS = int(self.DURATION / self.DT)
@@ -100,11 +101,10 @@ class Network:
         self.EXP_DT_TAU_THRESH = np.array(self.EXP_DT_TAU_THRESH, dtype=np.float64)
         self.DT_TAU_THRESH = np.array(self.DT_TAU_THRESH, dtype=np.float64)
         
-    def __init__(self, conf_file, sim_name, repo_path="/home/leon/models/rnn_numba/", **kwargs):
-        '''Initialize the Network model with configuration file, simulation name and
-        potentially other unspecified keyword arguments.'''
+    def __init__(self, conf_file, sim_name, repo_root, **kwargs):
+        """Initialize the Network model with configuration file, simulation name and potentially other unspecified keyword arguments."""
         
-        conf_path = repo_path + '/conf/'+ conf_file
+        conf_path = repo_root + '/conf/'+ conf_file
         print('Loading config from', conf_path)
         param = safe_load(open(conf_path, "r"))
         
@@ -114,12 +114,19 @@ class Network:
         for k, v in param.items():
             setattr(self, k, v)
 
-        self.FILE_PATH = self.DATA_PATH + "/" + self.FILE_NAME + ".h5"
-        print('Saving to', self.FILE_PATH)
-
+        
+        config.DISABLE_JIT = bool(self.DISABLE_JIT)
+        set_num_threads(self.NUM_THREADS)
+        
+        self.DATA_PATH = repo_root + "/data/simul/"
+        self.MAT_PATH = repo_root + "/data/matrix/"
+        
+        self.FILE_PATH = self.DATA_PATH + self.FILE_NAME + ".h5"
+        print('Saving data to', self.FILE_PATH)
+        
         if not os.path.exists(self.DATA_PATH):
             os.makedirs(self.DATA_PATH)
-            
+        
         if not os.path.exists(self.MAT_PATH):
             os.makedirs(self.MAT_PATH)
 
@@ -166,8 +173,8 @@ class Network:
         )
 
         if self.VERBOSE:
-            print("SIGMA", self.SIGMA)
-            print("KAPPA", self.KAPPA)
+            print("Tuning, KAPPA", self.KAPPA.flatten())
+            print("Asymmetry, SIGMA", self.SIGMA.flatten())
         
         self.SIGMA = self.SIGMA / np.abs(self.Jab)
         self.Jab *= self.GAIN
@@ -266,18 +273,24 @@ class Network:
             )
 
     def print_params(self):
-        '''Print the parameters of the Network.'''
+        """Print the parameters of the Network."""
         print("Parameters:")
         print("N", self.N, "Na", self.Na, end=" ")
         print("K", self.K, "Ka", self.Ka)
         
         print("Iext", self.Iext, end=" ")
         print("Jab", self.Jab.flatten())
-        print("KAPPA", self.KAPPA, "SIGMA", self.SIGMA)
+        print("Tuning, KAPPA", self.KAPPA.flatten())
+        print("Asymmetry, SIGMA", self.SIGMA.flatten())
         print("MF Rates:", self.mf_rates)
-
+        
+        if self.TF_TYPE == 0:
+            print("Transfert Func", "Threshold Linear")
+        else:
+            print("Transfert Func", "Sigmoid")
+            
     def update_thresh(self):
-        '''Update the threshold values based on available dynamics.'''
+        """Update the threshold values based on available dynamics."""
         for i_pop in range(self.N_POP):
             self.thresh[self.csumNa[i_pop] : self.csumNa[i_pop + 1]] = (
                 self.thresh[self.csumNa[i_pop] : self.csumNa[i_pop + 1]]
@@ -291,15 +304,19 @@ class Network:
             )
 
     def perturb_inputs(self, step):
-        '''Perturb the inputs based on the simulus parameters.''' 
+        """Perturb the inputs based on the simulus parameters.""" 
         if step == 0:
-            self.ff_inputs_0[self.csumNa[0] : self.csumNa[0 + 1]] = 0.0
-
+            for i in range(self.N_POP):
+                if self.BUMP_SWITCH[i]:
+                    self.ff_inputs_0[self.csumNa[i] : self.csumNa[i + 1]] = 0.0
+            
         if step == self.N_STIM_ON:
-            self.ff_inputs_0[self.csumNa[0] : self.csumNa[1]] = self.Iext[0]
-
+            for i in range(self.N_POP):
+                if self.BUMP_SWITCH[i]:
+                    self.ff_inputs_0[self.csumNa[i] : self.csumNa[i + 1]] = self.Iext[i]
+                    
         if step == self.N_STIM_ON:
-            if self.VERBOSE:
+            if self.VERBOSE and np.any(self.I0!=0):
                 print("STIM ON")
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
@@ -311,8 +328,9 @@ class Network:
                     theta, self.I0[i_pop], self.SIGMA0, self.PHI0)
 
         if step == self.N_STIM_OFF:
-            if self.VERBOSE:
+            if self.VERBOSE and np.any(self.I0!=0):
                 print("STIM OFF")
+                
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
                 self.ff_inputs_0[
@@ -322,11 +340,11 @@ class Network:
                 ] - pertur_func(
                     theta, self.I0[i_pop], self.SIGMA0, self.PHI0)
 
-        if step == self.N_STIM_OFF:
+        if step == self.N_STIM_OFF and np.any(self.I0!=0):
             self.ff_inputs_0[self.csumNa[0] : self.csumNa[1]] = self.Iext[0]
 
         if step == self.N_CUE_ON:
-            if self.VERBOSE:
+            if self.VERBOSE and np.any(self.I1!=0):
                 print("CUE ON")
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
@@ -338,7 +356,7 @@ class Network:
                     theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
 
         if step == self.N_CUE_OFF:
-            if self.VERBOSE:
+            if self.VERBOSE and np.any(self.I1!=0) :
                 print("CUE OFF")
             for i_pop in range(self.N_POP):
                 theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
@@ -350,7 +368,7 @@ class Network:
                     theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
 
     def generate_Cij(self):
-        ''' Generate the connectivity matrix Cij according to the specific regulation rules.'''
+        """ Generate the connectivity matrix Cij according to the specific regulation rules."""
         np.random.seed(self.SEED)
         
         Cij = np.zeros((self.N, self.N), dtype=np.float64)
@@ -391,7 +409,7 @@ class Network:
         return Cij
 
     def generate_Cij_NMDA(self, Cij):
-        '''Modify the connectivity matrix when NMDA receptors are active.'''
+        """Modify the connectivity matrix when NMDA receptors are active."""
         Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float64)
 
         for i_post in range(self.N_POP):
@@ -445,7 +463,7 @@ class Network:
         )
         
         amplitudes.append(m1)
-        phases.append(phase * 180.0 / np.pi)        
+        phases.append(phase * 180.0 / np.pi)
         
         if self.N_POP > 1:
             m0, m1, phase = decode_bump(
@@ -487,19 +505,19 @@ class Network:
         )
         
     def run(self):
-        '''Perform the simulation for a series of steps within the specified duration.'''
+        """Perform the simulation for a series of steps within the specified duration."""
         start = perf_counter()
             
         if self.IF_LOAD_MAT:
-            print('Loading matrix from', self.MAT_PATH + "/Cij.npy")
-            Cij = np.load(self.MAT_PATH + "/Cij.npy")
+            print('Loading matrix from', self.MAT_PATH + "Cij.npy")
+            Cij = np.load(self.MAT_PATH + "Cij.npy")
         else:
             print('Generating matrix Cij')
             Cij = self.generate_Cij()
             
             if self.IF_SAVE_MAT:
-                print('Saving matrix to', self.MAT_PATH + "/Cij.npy")
-                np.save(self.MAT_PATH + "/Cij.npy", Cij)
+                print('Saving matrix to', self.MAT_PATH + "Cij.npy")
+                np.save(self.MAT_PATH + "Cij.npy", Cij)
         
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
@@ -510,7 +528,9 @@ class Network:
             stp = STP_Model(self.Na[0], self.DT)
             if self.VERBOSE:
                 print("stp:", stp.USE, stp.TAU_REC, stp.TAU_FAC)
-        
+        else:
+            stp = None
+            
         if self.VERBOSE:
             self.print_params()
 
@@ -543,11 +563,9 @@ class Network:
             )
 
             if self.IF_STP:
-                self.inputs[0, : self.Na[0]] = (
-                    stp.A_u_x_stp * self.inputs[0, : self.Na[0]]
-                )
-                stp.hansel_stp(self.rates[: self.Na[0]])
-                # stp.markram_stp(self.rates[:self.Na[0]].copy())
+                self.inputs[0, :self.Na[0]] = (stp.A_u_x_stp * self.inputs[0, :self.Na[0]])
+                # stp.hansel_stp(self.rates[:self.Na[0]])
+                stp.markram_stp(self.rates[:self.Na[0]])
 
             if self.IF_NMDA:
                 self.inputs_NMDA = numba_update_inputs(
@@ -565,6 +583,7 @@ class Network:
                 self.inputs,
                 self.inputs_NMDA,
                 self.thresh,
+                self.TF_TYPE,
                 self.csumNa,
                 self.EXP_DT_TAU_MEM,
                 self.DT_TAU_MEM,
@@ -582,7 +601,7 @@ class Network:
                 times = np.round((step -self.N_STEADY) / self.N_STEPS * self.DURATION, 2)
 
                 if running_step % self.N_WINDOW == 0:
-                    data_stack = self.stack_arrays(time_vec)
+                    data_stack = self.stack_arrays(time_vec, stp)
                     data.append(data_stack)
                                         
                     if self.VERBOSE:
@@ -608,12 +627,12 @@ class Network:
         
 
 if __name__ == "__main__":
-    '''If run directly, use the first command-line argument as the configuration file, and the second command-line 
-    argument as the simulation name.'''
+    """If run directly, use the first command-line argument as the configuration file, and the second command-line 
+    argument as the simulation name."""
     
     conf_file = sys.argv[1]
     sim_name = sys.argv[2]
-    model = Network(conf_file, sim_name)
+    model = Network(conf_file, sim_name, repo_root='../../')
     
     start = perf_counter()
     model.run()

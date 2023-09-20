@@ -12,13 +12,14 @@ def numba_erf(x):
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def numba_TF(x, thresh=15):
-    """numba_TF."""
-    # if tfname=='NL':
-    # return x * (x > thresh)
-    # elif tfname=='Sig':
-    return thresh * (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
+def numba_TF(x, thresh=15, TF_TYPE=0):
+    """numba_TF."""    
+    if TF_TYPE == 0:
+        tf = (x * (x > thresh)).astype(np.float64)
+    if TF_TYPE == 1:
+        tf = thresh * (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
 
+    return tf
 
 @njit(parallel=True, fastmath=True, cache=True)
 def numba_update_ff_inputs(
@@ -66,6 +67,7 @@ def numba_update_rates(
     inputs,
     inputs_NMDA,
     thresh,
+    TF_TYPE,
     csumNa,
     EXP_DT_TAU_MEM,
     DT_TAU_MEM,
@@ -73,7 +75,7 @@ def numba_update_rates(
     IF_NMDA=0,
 ):
     net_inputs = ff_inputs
-
+    
     for i_pop in range(inputs.shape[0]):
         net_inputs = net_inputs + inputs[i_pop]
 
@@ -82,7 +84,7 @@ def numba_update_rates(
             net_inputs = net_inputs + inputs_NMDA[i_pop]
     
     if RATE_DYN == 0:
-        rates = numba_TF(net_inputs, thresh)
+        rates = numba_TF(net_inputs, thresh, TF_TYPE)
     else:
         for i_pop in range(inputs.shape[0]):
             rates[csumNa[i_pop] : csumNa[i_pop + 1]] = (
@@ -92,7 +94,7 @@ def numba_update_rates(
                 csumNa[i_pop] : csumNa[i_pop + 1]
             ] + DT_TAU_MEM[i_pop] * numba_TF(
                 net_inputs[csumNa[i_pop] : csumNa[i_pop + 1]],
-                thresh[csumNa[i_pop] : csumNa[i_pop + 1]],
+                thresh[csumNa[i_pop] : csumNa[i_pop + 1]], TF_TYPE
             )
 
     return rates

@@ -30,9 +30,9 @@ T_STIM_ON: 2.0
 # time for stimulus offset in s 
 T_STIM_OFF: 2.5
 # amplitude of the 1st stimulus
-I0: [1.0, 0.]
+I0: [1.0]
 # amplitude of the 2nd stimulus
-I1: [0.0, 0.0]
+I1: [0.0]
 # I1: [0.05, 0.0]
 # Phase of the 1st stimulus
 PHI0: 180.0
@@ -56,6 +56,10 @@ frac: [1.0]
 ##########################################
 # Network Dynamic
 ##########################################
+# Transfert Function
+# set to 0 for threshold linear, 1 for sigmoid
+TF_TYPE: 1
+
 # Dynamics of the rates
 # set to 0 if instantaneous rates, 1 if exponentially decaying
 RATE_DYN: 1
@@ -99,6 +103,9 @@ Iext: [14.0]
 # External rate
 M0: 1.0
 
+####################
+# Plasticity
+####################
 # adds learning
 IF_LEARNING: 0
 # adds short term plasticity
@@ -114,11 +121,15 @@ IF_SAVE_MAT: 1
 
 # seed for connectivity None or float
 SEED: 1
-# connectivity type ('all', 'all_cos', 'sparse', 'cos')
-# if string contains 'all' as in 'all_cos', the connections are all
-# to all and the synapses are modulated in strength to fit a given
-# shape otherwise this is a sparse matrix and the shape modulates the
-# probabilities of connections
+# STRUCTURE can be 'all', 'all_cos', 'cos', 'spec_cos'
+
+# By default the matrix is a random sparse matrix
+# 'cos' gives a sparse matrix with strong cosine structure
+# 'spec_cos' gives a sparse matrix with weak cosine structure
+# 'all' gives an all to all matrix
+# 'all_cos' gives an all to all with cosine shape
+
+# sets probabilities of connections' shape
 STRUCTURE: ['all_cos']
 # strength of the asymmetries if all to all
 SIGMA: [0.0]

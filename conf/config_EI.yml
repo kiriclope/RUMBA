@@ -1,15 +1,15 @@
 ##########################################
 # Simulation parameters
 ##########################################
+# disable jit compilation
+DISABLE_JIT: 0
+# number of threads for parallel processing
+NUM_THREADS: 116
+
 # output different prompts for debugging purpose
 VERBOSE: 0
 
-# Path to where to save the simulation files
-DATA_PATH: /home/leon/models/rnn_numba/data/simul
-# Path to where to save/load the connectivity matrix
-MAT_PATH: /home/leon/models/rnn_numba/data/matrix
-
-# 1 to save the data to DATA_PATH
+# 1 to save the data to REPO_ROOT/data/simul
 SAVE_DATA: 1
 
 # Time step in s
@@ -19,7 +19,7 @@ DURATION: 5.0
 # time to start saving simulation files
 T_STEADY: 1.0
 # Saving to files every T_WINDOW
-T_WINDOW: .5
+T_WINDOW: .250
 
 ##########################################
 # Parameters for the stimulus presentation
@@ -30,7 +30,7 @@ T_STIM_ON: 2.0
 # time for stimulus offset in s 
 T_STIM_OFF: 2.5
 # amplitude of the 1st stimulus
-I0: [1.0, 0.]
+I0: [2.0, 0.0]
 # amplitude of the 2nd stimulus
 I1: [0.0, 0.0]
 # I1: [0.05, 0.0]
@@ -56,6 +56,10 @@ frac: [0.75, 0.25]
 ##########################################
 # Network Dynamic
 ##########################################
+# Transfert Function
+# set to 0 for threshold linear, 1 for sigmoid
+TF_TYPE: 1
+
 # Dynamics of the rates
 # set to 0 if instantaneous rates, 1 if exponentially decaying
 RATE_DYN: 1
@@ -75,11 +79,11 @@ TAU_NMDA: [0.2, 0.2]
 
 # Feedforward inputs dynamics
 # set to 0 for instantaneous, 1 to exp decay, 2 adds gaussian noise
-FF_DYN: 0
+FF_DYN: 2
 # FF time constants in s
 TAU_FF: [0.003, 0.003]
 # Variance of the noise
-VAR_FF: [0.0, 0.0]
+VAR_FF: [1.0, 1.0]
 
 # Threshold dynamics
 # set to 0 constant thresholds, 1 to add adaptative thresholds
@@ -99,6 +103,13 @@ Iext: [0.5, 0.25]
 # External rate
 M0: 1.0
 
+# To add an attentional switch
+# if BUMP_SWITCH[i] == 1 it sets Iext[i] to zero before stimulus presentation
+BUMP_SWITCH: [1, 0]
+
+########################
+# Plasticity
+########################
 # adds learning
 IF_LEARNING: 0
 # adds short term plasticity
@@ -108,24 +119,37 @@ IF_STP: 0
 # Connectivity
 ##############
 # load connectivity matrix
+# from REPO_PATH/data/matrix
 IF_LOAD_MAT: 0
+
 # save connectivity matrix
 IF_SAVE_MAT: 1
 
 # seed for connectivity None or float
 SEED: 1
-# connectivity type ('all', 'all_cos', 'sparse', 'cos')
-# if string contains 'all' as in 'all_cos', the connections are all
-# to all and the synapses are modulated in strength to fit a given
-# shape otherwise this is a sparse matrix and the shape modulates the
-# probabilities of connections
-STRUCTURE: ['None', 'None', 'None', 'None']
-# strength of the asymmetries if all to all
-SIGMA: [0.0, 0.0, 0.0, 0.0]
+# connectivity type
+# STRUCTURE can be 'all', 'all_cos', 'cos', 'spec_cos'
+
+# By default the matrix is a random sparse matrix Cij
+# 'cos' gives a sparse matrix with strong cosine structure,
+# Pij = (1 + 2 KAPPA cos(theta_ij) / sqrt(Kb)), Cij = 1 with proba Pij
+# 'spec_cos' gives a sparse matrix with weak cosine structure,
+# Pij = (1 + 2 KAPPA cos(theta_ij) / sqrt(Kb)) , Cij = 1 with proba Pij
+# 'all' gives an all to all matrix, Cij = 1/N
+# 'all_cos' gives an all to all with cosine shape,
+# Cij = (1 + 2 KAPPA cos(theta_ij)) / N
+# any other string gives a sparse matrix,
+# Cij = 1 with proba Ka/Na, 0 otherwise
+
+# sets probabilities of connections' shape
+STRUCTURE: ['spec_cos', 'None', 'None', 'None']
 # tuning of the recurrent connections
-KAPPA: [0.0, 0.0, 0.0, 0.0]
+KAPPA: [5.0, 0.0, 0.0, 0.0]
 # phase of the connectivity
 PHASE: 0.0
+
+# strength of the asymmetries if all to all
+SIGMA: [0.0, 0.0, 0.0, 0.0]
 
 # parameters for computing the mean field
 TOLERANCE: 1.e-12
