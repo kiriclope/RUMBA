@@ -15,7 +15,7 @@ def numba_erf(x):
 def numba_TF(x, thresh=15):
     """numba_TF."""
     # if tfname=='NL':
-    # return x * (x > 0.0)
+    # return x * (x > thresh)
     # elif tfname=='Sig':
     return thresh * (0.5 * (1.0 + numba_erf(x / np.sqrt(2.0)))).astype(np.float64)
 

@@ -1,6 +1,5 @@
 import numpy as np
 from numba import jit
-from scipy.ndimage import convolve
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def numba_normal(size, SEED=0):
@@ -115,65 +114,56 @@ def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=
 
     # np.random.seed(SEED)
 
-    Pij = np.zeros((Na, Nb), dtype=np.float64)
+    # Pij = np.zeros((Na, Nb), dtype=np.float64)
     Cij = np.zeros((Na, Nb), dtype=np.float64)
-    Jij = np.ones((Na, Nb), dtype=np.float64)
-
-    if verbose:
-        print('random connectivity')
-
-    if STRUCTURE != 'None':
+    
+    if 'cos' in STRUCTURE:
+        
+        Pij = np.zeros((Na, Nb), dtype=np.float64)
+        
         theta = np.linspace(0.0, 2.0 * np.pi, Nb)
-        phi = np.linspace(0.0, 2.0 * np.pi, Na)
-        
-        # if 'perm' in STRUCTURE:
-        #     print('permuted map')
-        #     theta = np.random.permutation(theta) - np.pi
-        #     # phi = np.random.permutation(phi)
-        
-        theta = theta.astype(np.float64)
-        phi = phi.astype(np.float64)
+        phi = np.linspace(0.0, 2.0 * np.pi, Na)        
 
         theta_ij = theta_mat(theta, phi)
-        if 'lateral' in STRUCTURE:
-            if verbose:
-                print('lateral')
-            cos_ij = np.cos(theta_ij - np.pi)
-        else:
-            cos_ij = np.cos(theta_ij - PHASE)
-
-        if 'cos' in STRUCTURE:
-            Pij[:, :] = cos_ij
-
-    if "ring" in STRUCTURE:
-        if verbose:
-            print('with strong cosine structure')
-        Pij[:, :] = Pij * np.float64(KAPPA)
-
-    elif "spec_cos" in STRUCTURE:
-        if verbose:
-            print('with spec cosine structure')
-        Pij[:, :] = Pij * KAPPA / np.sqrt(Kb)
-
-
+        cos_ij = np.cos(theta_ij - PHASE)
+        
+        Pij[:, :] = cos_ij
+        Pij[:, :] = Pij * KAPPA
+        
     if "all" in STRUCTURE:
         if verbose:
-            print('with all to all cosine structure')
+            print('all to all connectivity')
         # itskov hansel
-        if "cos" in STRUCTURE: # 1/N (1 + cos)
-            Cij[:, :] = (1.0 + 2.0 * Pij * KAPPA) / Nb
+        if "cos" in STRUCTURE: # J_ij = 1/N (1 + 2.0 kappa cos(theta_ij))
+            if verbose:
+                print('with cosine structure')
+                
+            Cij[:, :] = (1.0 + 2.0 * Pij) / Nb
 
             if SIGMA>0.0:
-                Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb
-
-        elif "id" in STRUCTURE:
-            Cij[:, :] = np.identity(Nb)
-            
+                if verbose:
+                    print('with asymmetry')                
+                Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb            
         else:
-            Cij[:, :] = 1.0 / Nb 
+            Cij[:, :] = 1.0 / Nb
 
     else:
-        Pij[:, :] = (Kb / Nb) * (2.0 * Pij + 1.0)
-        Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
-
+        if verbose:
+            print('sparse connectivity')
+        
+        if 'cos' in STRUCTURE:
+                
+            if "spec" in STRUCTURE:
+                if verbose:
+                    print('with spec cosine structure')
+                Pij[:, :] = Pij / np.sqrt(Kb)
+            else:
+                if verbose:
+                    print('with strong cosine structure')            
+            
+            Pij[:, :] = (Kb / Nb) * (1.0 + 2.0 * Pij)   
+            Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Pij)
+        else:
+            Cij[:, :] = 1.0 * (np.random.rand(Na, Nb) < Kb/Nb)
+            
     return Cij
