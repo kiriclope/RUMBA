@@ -3,7 +3,7 @@
 ## Introduction
 This package provides an implementation of a recurrent neural network simulator with NUMBA.
 The network can have multiple neural populations, different connectivity profiles (all to all, sparse, tuned, ...).
-For more info look at the config files in ./conf
+For more info look at the config files in ./conf/.
 
 ## Installation
 Provide clear instructions on how to get your development environment running.
@@ -25,7 +25,9 @@ model = Network(config_file_name, output_file_name, path_to_repo, **kwargs)
 # run the model
 model.run()
 ```
-
+There are two configs here:
+- The first one is config_bump.py which is a continuous 1 population bump attractor model as in the NB stim paper.
+- The second is config_EI.py which are standard parameters for a tuned bump attractor balance network with 2 populations.
 
 ## Contributing
 Feel free to contribute.

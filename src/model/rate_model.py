@@ -311,6 +311,8 @@ class Network:
             for i in range(self.N_POP):
                 if self.BUMP_SWITCH[i]:
                     self.ff_inputs_0[self.csumNa[i] : self.csumNa[i + 1]] = 0.0
+                if self.K !=1 and self.BUMP_SWITCH[i]:
+                    self.ff_inputs_0[self.csumNa[i] : self.csumNa[i + 1]] = self.Iext[i] / np.sqrt(self.Ka[0])
             
         if step == self.N_STIM_ON:
             for i in range(self.N_POP):

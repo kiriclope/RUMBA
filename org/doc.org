@@ -1,5 +1,5 @@
 #+STARTUP: fold
-#+TITLE: RNN numba package
+#+TITLE: EI Bump Attractor Network Model
 #+PROPERTY: header-args:ipython :results both :exports both :async yes :session dual_data :kernel dual_data
 
 * notebook settings
@@ -20,7 +20,9 @@
 : Python exe
 : /home/leon/mambaforge/envs/dual_data/bin/python
 
-* Continuous Bump Attractor Model
+
+* EI Continuous Attractor Model
+Here I implemented a balanced EI network that exhibits attractor dynamics.
 ** imports
 #+begin_src ipython
   import sys
@@ -29,27 +31,35 @@
 #+end_src
 
 #+RESULTS:
+
 ** Single trial
 *** Simulation
 To run a simulation, first we need to define a network model.
-The class Network takes two arguments:
-                1.  the name of the configuration file that defines the model. 
-                   This file is well detailed (check config_bump.yml or config_EI.yml)
-                2. the name of the output file that will contain the simulation data.
-                   The model writes all relevant data to a single dataframe stored in an h5 format
+The class Network takes three mandatory arguments:
+
+                1. The name of the configuration file that defines the model,
+                   eg 'config_EI.yml', these files are in ../conf/ and well detailed.
+                   
+                2. The name of the output file that will contain the simulation data.
+                   eg 'bump'. Simulation results will be saved as a data frame to '../data/simul/bump.h5'.
+                   
+                3. The path to the root of this repository.
+
+One can also pass extra arguments to Network, basically any parameter that is in the config file so that it will be overwritten.
                    
 #+begin_src ipython
   REPO_ROOT = "/home/leon/tmp/rnn_numba"
-  model = Network('config_bump.yml', 'bump', REPO_ROOT, VERBOSE=1)
+  model = Network('config_2pop.yml', 'bump', REPO_ROOT, VERBOSE=1)
 #+end_src
 
 #+RESULTS:
-: Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+: Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
 : Saving data to /home/leon/tmp/rnn_numba/data/simul/bump.h5
-: Jab [[-2.75]]
-: Tuning, KAPPA [0.4]
-: Asymmetry, SIGMA [0.]
-: Iext [14.]
+: Jab [[ 2.  -1.5]
+:  [ 1.  -1. ]]
+: Tuning, KAPPA [0.6 0.  0.6 0. ]
+: Asymmetry, SIGMA [0. 0. 0. 0.]
+: Iext [0.5  0.25]
 
 Then one just runs the model with
 #+begin_src ipython
@@ -61,27 +71,41 @@ Then one just runs the model with
   Generating matrix Cij
   all to all connectivity
   with cosine structure
+  all to all connectivity
+  with cosine structure
+  all to all connectivity
+  with cosine structure
+  all to all connectivity
+  with cosine structure
   Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Parameters:
-  N 1000 Na [1000] K 1.0 Ka [1.]
-  Iext [14.] Jab [-2.75]
-  Tuning, KAPPA [0.4]
-  Asymmetry, SIGMA [0.]
-  MF Rates: [5.09090909]
+  N 2000 Na [1500  500] K 1.0 Ka [1. 1.]
+  Iext [0.5  0.25] Jab [ 2.  -1.5  1.  -1. ]
+  Tuning, KAPPA [0.6 0.  0.6 0. ]
+  Asymmetry, SIGMA [0. 0. 0. 0.]
+  MF Rates: [-0.25 -0.  ]
   Transfert Func Sigmoid
   Running simulation
-  times (s) 0.5 rates (Hz) [2.18]
-  times (s) 1.0 rates (Hz) [2.19]
+  times (s) 0.25 rates (Hz) [15.38, 13.66]
+  times (s) 0.5 rates (Hz) [15.38, 13.65]
+  times (s) 0.75 rates (Hz) [15.38, 13.64]
+  times (s) 1.0 rates (Hz) [15.38, 13.67]
   STIM ON
-  times (s) 1.5 rates (Hz) [6.25]
+  times (s) 1.25 rates (Hz) [15.38, 13.83]
+  times (s) 1.5 rates (Hz) [15.38, 13.83]
   STIM OFF
-  times (s) 2.0 rates (Hz) [5.9]
-  times (s) 2.5 rates (Hz) [5.91]
-  times (s) 3.0 rates (Hz) [5.87]
-  times (s) 3.5 rates (Hz) [5.87]
-  times (s) 4.0 rates (Hz) [5.89]
+  times (s) 1.75 rates (Hz) [15.38, 13.81]
+  times (s) 2.0 rates (Hz) [15.38, 13.82]
+  times (s) 2.25 rates (Hz) [15.38, 13.84]
+  times (s) 2.5 rates (Hz) [15.38, 13.83]
+  times (s) 2.75 rates (Hz) [15.38, 13.84]
+  times (s) 3.0 rates (Hz) [15.38, 13.82]
+  times (s) 3.25 rates (Hz) [15.38, 13.81]
+  times (s) 3.5 rates (Hz) [15.38, 13.82]
+  times (s) 3.75 rates (Hz) [15.38, 13.82]
+  times (s) 4.0 rates (Hz) [15.38, 13.82]
   saving data to /home/leon/tmp/rnn_numba/data/simul/bump.h5
-  Elapsed (with compilation) = 7.23014812899055s
+  Elapsed (with compilation) = 14.116994161042385s
 #+end_example
 
 *** Analysis
@@ -92,55 +116,68 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
+: 7ecd988c-cf80-4c9a-b6be-f85e7bd11e6c
 
 **** Load data
 #+begin_src ipython
-  df = pd.read_hdf(REPO_ROOT + "/data/simul/bump.h5", mode="r")  
+  df = pd.read_hdf(REPO_ROOT + "/data/simul/bump.h5", mode="r")
+  df_E = df[df.neurons<1500]
+  df_I = df[df.neurons>=500]
   print(df.head())
 #+end_src
 
 #+RESULTS:
-:       rates         ff       h_E  neurons   time
-: 0  2.512678 -11.005349 -5.810748        0  0.499
-: 1  1.003620  -0.271863 -5.810921        1  0.499
-: 2  4.395283   4.921598 -5.811103        2  0.499
-: 3  1.868867  -2.958338 -5.811292        3  0.499
-: 4  2.314441  -5.003102 -5.811489        4  0.499
+:        rates        ff        h_E        h_I  neurons   time
+: 0  15.378125 -0.573451  30.780855 -20.504734        0  0.249
+: 1  15.378125 -0.419887  30.780855 -20.504734        1  0.249
+: 2  15.378125 -1.284868  30.780854 -20.504734        2  0.249
+: 3  15.378125 -0.012410  30.780853 -20.504734        3  0.249
+: 4  15.378125 -0.355423  30.780851 -20.504734        4  0.249
 **** Rates
 ***** raster
 #+begin_src ipython
-  fig, ax = plt.subplots()
+  fig, ax = plt.subplots(1, 2, figsize=[2*width, height])
   pt = pd.pivot_table(df, values="rates", index=["neurons"], columns="time")
 
-  sns.heatmap(pt, cmap="jet", ax=ax, vmax=15, vmin=0)
-  ax.set_yticks([0, 500, 1000], [0, 500, 1000])
-  ax.set_xticks([0, 2, 4, 6, 8], [0, 1, 2, 3, 4])
-  ax.set_title('Excitatory')
+  sns.heatmap(pt[:1500], cmap="jet", ax=ax[0], vmax=15, vmin=0)
+  ax[0].set_yticks([0, 500, 1000, 1500], [0, 500, 1000, 1500])
+  ax[0].set_xticks([0, 2, 4, 6, 8], [0, 1, 2, 3, 4])
+  ax[0].set_title('Excitatory')
+
+  sns.heatmap(pt[1500:], cmap="jet", ax=ax[1], vmax=15, vmin=0)
+  ax[1].set_yticks([0, 250, 500], [0, 250, 500])
+  ax[1].set_xticks([0, 2, 4, 6, 8], [0, 1, 2, 3, 4])
+  ax[1].set_title('Inhibitory')
   
   plt.show()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/306021ad36bc6d21d2cd282fdbdf644e30bf8ac9.png]]
+: 81ce2943-73d4-4a52-811f-a560e64e339d
 
 ***** histograms
 
 #+begin_src ipython
-  mean_df = df.groupby("neurons").mean()
-  mean_df[mean_df.rates<.01] = np.nan
+  mean_df_E = df_E.groupby("neurons").mean()
+  mean_df_E[mean_df_E.rates<.001] = np.nan
 
-  sns.histplot(mean_df_E, x=mean_df_E.rates, kde=True, color='r')
+  mean_df_I = df_I.groupby("neurons").mean()
+  mean_df_I[mean_df_I.rates<.001] = np.nan
+
+  sns.histplot(mean_df_E, x=mean_df_E.rates, kde=True, color='r', label='E')
+  sns.histplot(mean_df_I, x=mean_df_I.rates, kde=True, color='b', label='I')
+  plt.legend(fontsize=12)
   plt.xlabel("Rates (au)")
   plt.show()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/9d093648db94aadb517d2d376ca2e5a6d38d7d2a.png]]
+: f30fef55-f4e2-4add-8f41-a0eff5181e5d
 
 **** Tuning
 
 #+begin_src ipython
-  data = df.groupby(['time'])['rates'].apply(decode_bump).reset_index()
+  data = df_E.groupby(['time'])['rates'].apply(decode_bump).reset_index()
   data[['m0', 'm1', 'phase']] = pd.DataFrame(data['rates'].tolist(), index=data.index)
   data = data.drop(columns=['rates'])
 
@@ -149,11 +186,11 @@ Then one just runs the model with
 
 #+RESULTS:
 :     time        m0        m1     phase
-: 0  0.499  2.182644  0.170818  0.151626
-: 1  0.999  2.189366  0.052484  2.583821
-: 2  1.499  6.248643  7.171486  3.136531
-: 3  1.999  5.900416  5.401989  3.128763
-: 4  2.499  5.910800  5.532978  3.094187
+: 0  0.249  0.513658  0.017674  3.175195
+: 1  0.499  0.503480  0.006174  1.890976
+: 2  0.749  0.517241  0.021237  2.946893
+: 3  0.999  0.498194  0.022528  4.234585
+: 4  1.249  4.686576  5.824244  3.141923
 
 #+begin_src ipython
   fig, ax = plt.subplots(1, 3, figsize=[2*width, height])
@@ -177,14 +214,171 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/9d36516e62ac78b20c77346607d6a05bfc9d144d.png]]
+[[file:./.ob-jupyter/a2843c01394ba579257416758c88eac704e22609.png]]
+
+#+begin_src ipython
+
+  
+#+end_src
+
+** Parameter Search
+*** Changing J0
+**** Simulation
+#+begin_src ipython
+  REPO_ROOT = "/home/leon/tmp/rnn_numba"  
+  J0_list = np.linspace(.1, 3, 10)
+  print(J0_list)
+#+end_src
+
+#+RESULTS:
+: [0.1        0.42222222 0.74444444 1.06666667 1.38888889 1.71111111
+:  2.03333333 2.35555556 2.67777778 3.        ]
+
+#+begin_src ipython
+  IF_LOAD_MAT = 0
+  IF_SAVE_MAT = 1
+
+  for J0 in J0_list:
+      model = Network('config_2pop.yml', '2pop_J0_%.1f' % J0, REPO_ROOT,
+                      IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
+                      Jab=[1, -J0, 1, -1], VERBOSE=0)
+      
+      model.run()
+
+      IF_LOAD_MAT = 1
+      IF_SAVE_MAT = 0
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_0.0.h5
+  Generating matrix Cij
+  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  /home/leon/tmp/rnn_numba/src/model/rate_model.py:180: RuntimeWarning: invalid value encountered in divide
+    self.SIGMA = self.SIGMA / np.abs(self.Jab)
+  Elapsed (with compilation) = 13.715521463076584s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_0.3.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.55905929300934s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_0.6.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.694595383945853s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_0.9.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.68189989507664s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_1.2.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.617455482017249s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_1.5.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.692804301972501s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_1.8.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.68109585007187s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_2.1.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.621808980009519s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_2.4.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.653374025016092s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_2.7.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.588475476950407s
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_2pop.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/2pop_J0_3.0.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 13.580890160985291s
+#+end_example
+
+**** Analysis
+#+begin_src ipython
+  J0_list = np.linspace(0, 3, 11)
+
+  df_list = []
+
+  for i in range(J0_list.shape[0]):
+      df_i = pd.read_hdf(REPO_ROOT + "/data/simul/2pop_J0_%.1f.h5" % J0_list[i], mode="r")
+      df_i['J0'] = J0_list[i]
+      df_list.append(df_i)
+
+  df = pd.concat(df_list, ignore_index=True)
+  print(df.head())
+#+end_src
+
+#+RESULTS:
+:       rates        ff       h_E  neurons   time   J0
+: 0  2.979453  9.873323 -5.351787        0  0.499  2.0
+: 1  2.830152 -4.640124 -5.351531        1  0.499  2.0
+: 2  3.098595  2.158386 -5.351274        2  0.499  2.0
+: 3  3.415840 -6.115636 -5.351014        3  0.499  2.0
+: 4  3.625322  0.626738 -5.350751        4  0.499  2.0
+
+
+#+begin_src ipython
+  res = df.groupby(['time', 'J0'])['rates'].apply(decode_bump).reset_index()
+  res[['m0', 'm1', 'phase']] = pd.DataFrame(res['rates'].tolist(), index=res.index)
+  res = res.drop(columns=['rates'])
+  print(res.head())
+#+end_src
+
+#+RESULTS:
+:     time   J0        m0        m1     phase
+: 0  0.499  2.0  2.643238  0.074680  4.044520
+: 1  0.499  2.2  2.506782  0.028911  3.321685
+: 2  0.499  2.4  2.372550  0.021852  6.135836
+: 3  0.499  2.6  2.273263  0.004630  5.104311
+: 4  0.499  2.8  2.154610  0.054661  5.969938
+
+#+begin_src ipython
+  last = res[res.time==res.time.iloc[-1]]
+  last = last.drop(columns=['time'])
+  print(last.head())
+#+end_src
+
+#+RESULTS:
+:      J0        m0        m1     phase
+: 77  2.0  7.223276  0.059838  5.009779
+: 78  2.2  6.785306  0.235569  5.189480
+: 79  2.4  6.319345  2.347832  3.364468
+: 80  2.6  6.067178  4.456472  2.924240
+: 81  2.8  5.822750  5.580686  3.089648
+
+#+begin_src ipython
+  sns.lineplot(last, x='J0', y=last['m1']/last['m0'])
+  plt.xlabel('Recurrent Strength $J_0$')
+  plt.ylabel('$\mathcal{F}_1$ (Hz)')
+  plt.show()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/f76613de4bb887e4b31e648704cdd64935475d1f.png]]
 
 #+begin_src ipython
 
 #+end_src
 
 #+RESULTS:
-
 ** Multiple trials
 *** Simulations
 #+begin_src ipython
@@ -220,7 +414,7 @@ Then one just runs the model with
   Generating matrix Cij
   Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 53.97293146402808s
+  Elapsed (with compilation) = 59.94008179299999s
   ##########################################
   trial 2
   ##########################################
@@ -228,7 +422,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_2.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 56.96205114200711s
+  Elapsed (with compilation) = 58.91828673589043s
   ##########################################
   trial 3
   ##########################################
@@ -236,7 +430,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_3.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 46.552777758974116s
+  Elapsed (with compilation) = 59.18604208598845s
   ##########################################
   trial 4
   ##########################################
@@ -244,7 +438,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_4.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 57.053969001048245s
+  Elapsed (with compilation) = 60.01277774409391s
   ##########################################
   trial 5
   ##########################################
@@ -252,7 +446,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_5.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 54.42072479397757s
+  Elapsed (with compilation) = 59.28222737403121s
   ##########################################
   trial 6
   ##########################################
@@ -260,7 +454,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_6.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 50.73790435300907s
+  Elapsed (with compilation) = 59.428383418009616s
   ##########################################
   trial 7
   ##########################################
@@ -268,7 +462,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_7.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 51.30651221697917s
+  Elapsed (with compilation) = 59.492747734999284s
   ##########################################
   trial 8
   ##########################################
@@ -276,7 +470,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_8.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 48.36234194302233s
+  Elapsed (with compilation) = 53.652442602906376s
   ##########################################
   trial 9
   ##########################################
@@ -284,7 +478,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_9.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 52.83128838700941s
+  Elapsed (with compilation) = 50.68888223904651s
 #+end_example
 
 *** Analysis
@@ -308,19 +502,20 @@ from src.analysis.decode import decode_bump
       df_list.append(df_i)
 
   df = pd.concat(df_list, ignore_index=True)
+  df_E = df[df.neurons<7500]
   print(df.head())
 #+end_src
 
 #+RESULTS:
-:       rates         ff       h_E        h_I  neurons   time  trial
-: 0  0.620963  17.178619  7.837148 -24.014507        0  0.499      1
-: 1  0.348972  19.188986  8.049864 -25.528297        1  0.499      1
-: 2  0.044523  18.140488  8.291198 -27.459217        2  0.499      1
-: 3  0.051996  17.061010  7.774259 -26.545981        3  0.499      1
-: 4  0.396972  16.060816  8.087732 -25.197549        4  0.499      1
+:       rates        ff       h_E       h_I  neurons   time  trial
+: 0  0.026551  1.559067  0.607519 -3.676191        0  0.249      1
+: 1  0.035987 -0.175400  0.605969 -3.863151        1  0.249      1
+: 2  0.038527 -0.821442  0.616959 -4.002131        2  0.249      1
+: 3  0.054012  1.180297  0.596296 -3.823737        3  0.249      1
+: 4  0.053022  1.574449  0.541678 -3.569974        4  0.249      1
 
 #+begin_src ipython
-  data = df.groupby(['time', 'trial'])['rates'].apply(decode_bump).reset_index()
+  data = df_E.groupby(['time', 'trial'])['rates'].apply(decode_bump).reset_index()
   data[['m0', 'm1', 'phase']] = pd.DataFrame(data['rates'].tolist(), index=data.index)
   data = data.drop(columns=['rates'])
   print(data.head())
@@ -328,11 +523,11 @@ from src.analysis.decode import decode_bump
 
 #+RESULTS:
 :     time  trial        m0        m1     phase
-: 0  0.499      1  0.310010  0.436322  1.350543
-: 1  0.499      2  0.309471  0.435234  1.345035
-: 2  0.499      3  0.309075  0.434342  1.501287
-: 3  0.499      4  0.308214  0.433595  1.501947
-: 4  0.499      5  0.309797  0.435703  1.300236
+: 0  0.249      1  0.027236  0.000214  5.286942
+: 1  0.249      2  0.026499  0.000367  5.583405
+: 2  0.249      3  0.026858  0.000417  0.416132
+: 3  0.249      4  0.027228  0.000225  3.461241
+: 4  0.249      5  0.026906  0.000285  4.473676
 
 #+begin_src ipython
   end_point = data[data.time == data.time.iloc[-1]]
@@ -340,12 +535,12 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-:      time  trial        m0        m1     phase
-: 63  3.999      1  0.305413  0.429020  2.379814
-: 64  3.999      2  0.306242  0.430313  2.387125
-: 65  3.999      3  0.305628  0.429620  2.393247
-: 66  3.999      4  0.304745  0.428685  2.389969
-: 67  3.999      5  0.305512  0.429292  2.385865
+:       time  trial        m0        m1     phase
+: 135  3.999      1  0.364449  0.318936  3.722584
+: 136  3.999      2  0.365353  0.314348  3.685926
+: 137  3.999      3  0.361278  0.314820  3.690810
+: 138  3.999      4  0.363572  0.315568  3.700796
+: 139  3.999      5  0.364761  0.320093  3.639834
 
 **** Phases 
 #+begin_src ipython
@@ -365,7 +560,7 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/ee0887ee475c849e0d32b48f85ee4f24b0b344de.png]]
+[[file:./.ob-jupyter/c58995b988723f1b09be9f70dcb826cdee33e4e0.png]]
 
 **** Precision Errors
 
@@ -380,19 +575,19 @@ from src.analysis.decode import decode_bump
 
 #+RESULTS:
 #+begin_example
-       time  trial        m0        m1     phase  accuracy  precision
-  63  3.999      1  0.305413  0.429020  2.379814 -0.761779  -0.000976
-  64  3.999      2  0.306242  0.430313  2.387125 -0.754468   0.006335
-  65  3.999      3  0.305628  0.429620  2.393247 -0.748345   0.012458
-  66  3.999      4  0.304745  0.428685  2.389969 -0.751623   0.009180
-  67  3.999      5  0.305512  0.429292  2.385865 -0.755728   0.005076
-  /tmp/ipykernel_2966984/1857574883.py:4: SettingWithCopyWarning: 
+        time  trial        m0        m1     phase  accuracy  precision
+  135  3.999      1  0.364449  0.318936  3.722584  0.580992   0.029979
+  136  3.999      2  0.365353  0.314348  3.685926  0.544333  -0.006680
+  137  3.999      3  0.361278  0.314820  3.690810  0.549218  -0.001795
+  138  3.999      4  0.363572  0.315568  3.700796  0.559204   0.008191
+  139  3.999      5  0.364761  0.320093  3.639834  0.498242  -0.052771
+  /tmp/ipykernel_3718977/1857574883.py:4: SettingWithCopyWarning: 
   A value is trying to be set on a copy of a slice from a DataFrame.
   Try using .loc[row_indexer,col_indexer] = value instead
 
   See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
     end_point['accuracy'] = end_point.phase - stim_phase
-  /tmp/ipykernel_2966984/1857574883.py:5: SettingWithCopyWarning: 
+  /tmp/ipykernel_3718977/1857574883.py:5: SettingWithCopyWarning: 
   A value is trying to be set on a copy of a slice from a DataFrame.
   Try using .loc[row_indexer,col_indexer] = value instead
 
@@ -415,52 +610,11 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/7ebef37e9d33cbff0298800444b68f12b1c8b0b9.png]]
-
-** Parameter Search
-*** Changing J0
-
-#+begin_src ipython
-  REPO_ROOT = "/home/leon/tmp/rnn_numba"
-
-  J0_list = np.linspace(1, 3, 11)
-  print(J0_list)
-#+end_src
-
-#+RESULTS:
-: [1.  1.2 1.4 1.6 1.8 2.  2.2 2.4 2.6 2.8 3. ]
-
-#+begin_src ipython
-  
-  IF_LOAD_MAT = 0
-  IF_SAVE_MAT = 1
-
-  for J0 in J0_list:
-      print('##########################################')
-      print("J0", J0)
-      print('##########################################')
-
-      model = Network('config_bump.yml', 'bump_J0_%.1f' % J0, REPO_ROOT,
-                      IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
-                      Jab=[-J0])
-
-      model.run()
-
-      IF_LOAD_MAT = 1
-      IF_SAVE_MAT = 0
-
-#+end_src
-
-#+RESULTS:
-: ##########################################
-: J0 1.0
-: ##########################################
-: Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-: Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_J0_1.0.h5
-: Generating matrix Cij
+[[file:./.ob-jupyter/4b114fa93c95418d96d6689c7f7d2e312ee3bc36.png]]
 
 
-* Balanced EI Bump Attractor Model
+* EI Bump Attractor Model
+Here I implemented a balanced EI network that exhibits attractor dynamics.
 ** imports
 #+begin_src ipython
   import sys
@@ -469,18 +623,25 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
+
 ** Single trial
 *** Simulation
 To run a simulation, first we need to define a network model.
-The class Network takes two arguments:
-                1.  the name of the configuration file that defines the model. 
-                   This file is well detailed (check config_bump.yml or config_EI.yml)
-                2. the name of the output file that will contain the simulation data.
-                   The model writes all relevant data to a single dataframe stored in an h5 format
+The class Network takes three mandatory arguments:
+
+                1. The name of the configuration file that defines the model,
+                   eg 'config_EI.yml', these files are in ../conf/ and well detailed.
+                   
+                2. The name of the output file that will contain the simulation data.
+                   eg 'bump'. Simulation results will be saved as a data frame to '../data/simul/bump.h5'.
+                   
+                3. The path to the root of this repository.
+
+One can also pass extra arguments to Network, basically any parameter that is in the config file so that it will be overwritten.
                    
 #+begin_src ipython
   REPO_ROOT = "/home/leon/tmp/rnn_numba"
-  model = Network('config_EI.yml', 'bump', REPO_ROOT, VERBOSE=1 , M0=1)
+  model = Network('config_EI.yml', 'bump', REPO_ROOT, VERBOSE=1)
 #+end_src
 
 #+RESULTS:
@@ -514,26 +675,26 @@ Then one just runs the model with
   MF Rates: [0.25 0.5 ]
   Transfert Func Sigmoid
   Running simulation
-  times (s) 0.25 rates (Hz) [0.0, 0.29]
-  times (s) 0.5 rates (Hz) [0.0, 0.29]
-  times (s) 0.75 rates (Hz) [0.0, 0.29]
-  times (s) 1.0 rates (Hz) [0.0, 0.29]
+  times (s) 0.25 rates (Hz) [0.03, 0.12]
+  times (s) 0.5 rates (Hz) [0.03, 0.12]
+  times (s) 0.75 rates (Hz) [0.03, 0.11]
+  times (s) 1.0 rates (Hz) [0.03, 0.12]
   STIM ON
-  times (s) 1.25 rates (Hz) [0.54, 0.74]
-  times (s) 1.5 rates (Hz) [0.54, 0.74]
+  times (s) 1.25 rates (Hz) [0.53, 0.74]
+  times (s) 1.5 rates (Hz) [0.53, 0.74]
   STIM OFF
-  times (s) 1.75 rates (Hz) [0.37, 0.6]
-  times (s) 2.0 rates (Hz) [0.37, 0.6]
-  times (s) 2.25 rates (Hz) [0.37, 0.6]
-  times (s) 2.5 rates (Hz) [0.37, 0.6]
-  times (s) 2.75 rates (Hz) [0.37, 0.6]
+  times (s) 1.75 rates (Hz) [0.36, 0.6]
+  times (s) 2.0 rates (Hz) [0.36, 0.6]
+  times (s) 2.25 rates (Hz) [0.36, 0.6]
+  times (s) 2.5 rates (Hz) [0.36, 0.6]
+  times (s) 2.75 rates (Hz) [0.36, 0.6]
   times (s) 3.0 rates (Hz) [0.37, 0.6]
-  times (s) 3.25 rates (Hz) [0.37, 0.6]
-  times (s) 3.5 rates (Hz) [0.37, 0.6]
-  times (s) 3.75 rates (Hz) [0.37, 0.6]
-  times (s) 4.0 rates (Hz) [0.37, 0.6]
+  times (s) 3.25 rates (Hz) [0.36, 0.6]
+  times (s) 3.5 rates (Hz) [0.36, 0.6]
+  times (s) 3.75 rates (Hz) [0.36, 0.6]
+  times (s) 4.0 rates (Hz) [0.36, 0.6]
   saving data to /home/leon/tmp/rnn_numba/data/simul/bump.h5
-  Elapsed (with compilation) = 55.362914263037965s
+  Elapsed (with compilation) = 51.37116646301001s
 #+end_example
 
 *** Analysis
@@ -555,12 +716,12 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-:           rates        ff           h_E        h_I  neurons   time
-: 0  1.603719e-14 -1.237244  1.555830e-10  -9.824757        0  0.249
-: 1  1.068644e-15 -0.286277  2.175872e-10 -10.012830        1  0.249
-: 2  5.164796e-14  1.380938  3.022810e-10  -9.672483        2  0.249
-: 3  2.162490e-15  0.181033  7.054538e-11  -9.582123        3  0.249
-: 4  1.895197e-13  0.603522  2.518099e-10  -9.404711        4  0.249
+:       rates        ff       h_E       h_I  neurons   time
+: 0  0.011703  2.091137  0.576383 -4.108179        0  0.249
+: 1  0.029542 -0.019575  0.606391 -3.970378        1  0.249
+: 2  0.023473  0.143316  0.640388 -3.931326        2  0.249
+: 3  0.018428  0.317533  0.646514 -3.824877        3  0.249
+: 4  0.014366 -0.533621  0.623375 -4.003720        4  0.249
 **** Rates
 ***** raster
 #+begin_src ipython
@@ -581,16 +742,16 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/567b587f96ee93c235c72d47aeaab2e9793c2fa4.png]]
+[[file:./.ob-jupyter/6463eb2251b70e773bab6b3c8ac4502a19545658.png]]
 
 ***** histograms
 
 #+begin_src ipython
   mean_df_E = df_E.groupby("neurons").mean()
-  mean_df_E[mean_df_E.rates<.01] = np.nan
+  mean_df_E[mean_df_E.rates<.001] = np.nan
 
   mean_df_I = df_I.groupby("neurons").mean()
-  mean_df_I[mean_df_I.rates<.01] = np.nan
+  mean_df_I[mean_df_I.rates<.001] = np.nan
 
   sns.histplot(mean_df_E, x=mean_df_E.rates, kde=True, color='r', label='E')
   sns.histplot(mean_df_I, x=mean_df_I.rates, kde=True, color='b', label='I')
@@ -600,7 +761,7 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/2cf0342fd0d41f94870518472025e535d1baaf27.png]]
+[[file:./.ob-jupyter/1a9c1b567c3ab22d56bb34304662b30af8a37d76.png]]
 
 **** Tuning
 
@@ -613,12 +774,12 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-:     time            m0            m1     phase
-: 0  0.249  1.971564e-11  1.996778e-11  4.101198
-: 1  0.499  9.912278e-12  3.949440e-12  0.031584
-: 2  0.749  8.105434e-11  1.410955e-10  4.814738
-: 3  0.999  7.173168e-12  3.755936e-12  0.843219
-: 4  1.249  5.370993e-01  5.969055e-01  3.144594
+:     time        m0        m1     phase
+: 0  0.249  0.027317  0.000451  3.921320
+: 1  0.499  0.026888  0.000202  3.518808
+: 2  0.749  0.026718  0.000084  3.626537
+: 3  0.999  0.026812  0.000093  5.765621
+: 4  1.249  0.531907  0.598873  3.163694
 
 #+begin_src ipython
   fig, ax = plt.subplots(1, 3, figsize=[2*width, height])
@@ -642,172 +803,7 @@ Then one just runs the model with
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/df0e799833321cc9b736bd2ec6795d703459e68a.png]]
-
-#+begin_src ipython
-
-#+end_src
-
-#+RESULTS:
-
-*** Parameter search
-
-#+begin_src ipython
-  Ie_list = np.linspace(0.1, 1, 10)
-  print(Ie_list)
-
-  REPO_ROOT = "/home/leon/tmp/rnn_numba"
-
-  IF_LOAD_MAT = 0
-  IF_SAVE_MAT = 1
-
-  for Ie in Ie_list:
-      print('##########################################')
-      print("Ie", Ie)
-      print('##########################################')
-
-      model = Network('config_EI.yml', 'bump_Ie_%.1f' % Ie, REPO_ROOT,
-                      IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
-                      Gain=Ie)
-      
-      model.run()
-
-      IF_LOAD_MAT = 1
-      IF_SAVE_MAT = 0
-
-#+end_src
-
-#+RESULTS:
-#+begin_example
-  [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1. ]
-  ##########################################
-  Ie 0.1
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.1.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 57.59470825298922s
-  ##########################################
-  Ie 0.2
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.2.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.72569092398044s
-  ##########################################
-  Ie 0.30000000000000004
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.3.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.357797659002244s
-  ##########################################
-  Ie 0.4
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.4.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.12026895402232s
-  ##########################################
-  Ie 0.5
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.5.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.90326176898088s
-  ##########################################
-  Ie 0.6
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.6.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.6129756779992s
-  ##########################################
-  Ie 0.7000000000000001
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.7.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 58.70668443996692s
-  ##########################################
-  Ie 0.8
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.8.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 53.72524890798377s
-  ##########################################
-  Ie 0.9
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_0.9.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 57.952931727981195s
-  ##########################################
-  Ie 1.0
-  ##########################################
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_EI.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_Ie_1.0.h5
-  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 57.457209688960575s
-#+end_example
-
-#+begin_src ipython
-  Ie_list = np.linspace(0.1, 1.0, 10)
-
-  df_list = []
-  
-  for i in range(Ie_list.shape[0]):
-      df_i = pd.read_hdf(REPO_ROOT + "/data/simul/bump_Ie_%.1f.h5" % Ie_list[i], mode="r")
-      df_i['Ie'] = i
-      df_list.append(df_i)
-
-  df = pd.concat(df_list, ignore_index=True)
-  df_E = df[df.neurons<7500]
-  print(df.head())
-
-#+end_src
-
-#+RESULTS:
-:       rates         ff       h_E        h_I  neurons   time  Ie
-: 0  0.368926  12.781403  9.071170 -20.381302        0  0.249   0
-: 1  0.548235  12.137876  8.606775 -19.757314        1  0.249   0
-: 2  0.791355  12.516987  8.236397 -18.628502        2  0.249   0
-: 3  0.659268  10.232158  8.340149 -19.042084        3  0.249   0
-: 4  0.235941   8.420432  8.426077 -20.439227        4  0.249   0
-
-#+begin_src ipython
-  trial = 0
-  fig, ax = plt.subplots(1, 2, figsize=[2*width, height])
-  pt = pd.pivot_table(df[df.Ie==trial], values="rates", index=["neurons"], columns="time")
-
-  sns.heatmap(pt[:7500], cmap="jet", ax=ax[0], vmax=1, vmin=0)
-  ax[0].set_yticks([0, 2500, 5000, 7500], [0, 2500, 5000, 7500])
-  ax[0].set_xticks([0, 2, 4, 6, 8], [0, 1, 2, 3, 4])
-  ax[0].set_title('Excitatory')
-
-  sns.heatmap(pt[7500:], cmap="jet", ax=ax[1], vmax=1, vmin=0)
-  ax[1].set_yticks([0, 625, 1250, 1875, 2500], [0, 625, 1250, 1875, 2500])
-  ax[1].set_xticks([0, 2, 4, 6, 8], [0, 1, 2, 3, 4])
-  ax[1].set_title('Inhibitory')
-
-  plt.show()
-
-#+end_src
-
-#+RESULTS:
-[[file:./.ob-jupyter/2ab394c7fca4f3c4c0ff8920d2f93d171cb0b91b.png]]
+[[file:./.ob-jupyter/ce4ca0715fa00f6388a19dbe6ea909decac78503.png]]
 
 ** Multiple trials
 *** Simulations
@@ -844,7 +840,7 @@ Then one just runs the model with
   Generating matrix Cij
   Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 53.97293146402808s
+  Elapsed (with compilation) = 51.05978687806055s
   ##########################################
   trial 2
   ##########################################
@@ -852,7 +848,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_2.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 56.96205114200711s
+  Elapsed (with compilation) = 59.463344207033515s
   ##########################################
   trial 3
   ##########################################
@@ -860,7 +856,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_3.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 46.552777758974116s
+  Elapsed (with compilation) = 59.76340044499375s
   ##########################################
   trial 4
   ##########################################
@@ -868,7 +864,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_4.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 57.053969001048245s
+  Elapsed (with compilation) = 50.80682804493699s
   ##########################################
   trial 5
   ##########################################
@@ -876,7 +872,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_5.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 54.42072479397757s
+  Elapsed (with compilation) = 59.20731191406958s
   ##########################################
   trial 6
   ##########################################
@@ -884,7 +880,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_6.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 50.73790435300907s
+  Elapsed (with compilation) = 52.11593077890575s
   ##########################################
   trial 7
   ##########################################
@@ -892,7 +888,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_7.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 51.30651221697917s
+  Elapsed (with compilation) = 54.824766193982214s
   ##########################################
   trial 8
   ##########################################
@@ -900,7 +896,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_8.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 48.36234194302233s
+  Elapsed (with compilation) = 50.43251221999526s
   ##########################################
   trial 9
   ##########################################
@@ -908,7 +904,7 @@ Then one just runs the model with
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_9.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
-  Elapsed (with compilation) = 52.83128838700941s
+  Elapsed (with compilation) = 51.49602844903711s
 #+end_example
 
 *** Analysis
@@ -937,12 +933,12 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-:       rates         ff       h_E        h_I  neurons   time  trial
-: 0  0.620963  17.178619  7.837148 -24.014507        0  0.499      1
-: 1  0.348972  19.188986  8.049864 -25.528297        1  0.499      1
-: 2  0.044523  18.140488  8.291198 -27.459217        2  0.499      1
-: 3  0.051996  17.061010  7.774259 -26.545981        3  0.499      1
-: 4  0.396972  16.060816  8.087732 -25.197549        4  0.499      1
+:       rates        ff       h_E       h_I  neurons   time  trial
+: 0  0.026551  1.559067  0.607519 -3.676191        0  0.249      1
+: 1  0.035987 -0.175400  0.605969 -3.863151        1  0.249      1
+: 2  0.038527 -0.821442  0.616959 -4.002131        2  0.249      1
+: 3  0.054012  1.180297  0.596296 -3.823737        3  0.249      1
+: 4  0.053022  1.574449  0.541678 -3.569974        4  0.249      1
 
 #+begin_src ipython
   data = df_E.groupby(['time', 'trial'])['rates'].apply(decode_bump).reset_index()
@@ -953,11 +949,11 @@ from src.analysis.decode import decode_bump
 
 #+RESULTS:
 :     time  trial        m0        m1     phase
-: 0  0.499      1  0.310010  0.436322  1.350543
-: 1  0.499      2  0.309471  0.435234  1.345035
-: 2  0.499      3  0.309075  0.434342  1.501287
-: 3  0.499      4  0.308214  0.433595  1.501947
-: 4  0.499      5  0.309797  0.435703  1.300236
+: 0  0.249      1  0.027236  0.000214  5.286942
+: 1  0.249      2  0.026499  0.000367  5.583405
+: 2  0.249      3  0.026858  0.000417  0.416132
+: 3  0.249      4  0.027228  0.000225  3.461241
+: 4  0.249      5  0.026906  0.000285  4.473676
 
 #+begin_src ipython
   end_point = data[data.time == data.time.iloc[-1]]
@@ -965,12 +961,12 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-:      time  trial        m0        m1     phase
-: 63  3.999      1  0.305413  0.429020  2.379814
-: 64  3.999      2  0.306242  0.430313  2.387125
-: 65  3.999      3  0.305628  0.429620  2.393247
-: 66  3.999      4  0.304745  0.428685  2.389969
-: 67  3.999      5  0.305512  0.429292  2.385865
+:       time  trial        m0        m1     phase
+: 135  3.999      1  0.364449  0.318936  3.722584
+: 136  3.999      2  0.365353  0.314348  3.685926
+: 137  3.999      3  0.361278  0.314820  3.690810
+: 138  3.999      4  0.363572  0.315568  3.700796
+: 139  3.999      5  0.364761  0.320093  3.639834
 
 **** Phases 
 #+begin_src ipython
@@ -990,7 +986,7 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/ee0887ee475c849e0d32b48f85ee4f24b0b344de.png]]
+[[file:./.ob-jupyter/c58995b988723f1b09be9f70dcb826cdee33e4e0.png]]
 
 **** Precision Errors
 
@@ -1005,19 +1001,19 @@ from src.analysis.decode import decode_bump
 
 #+RESULTS:
 #+begin_example
-       time  trial        m0        m1     phase  accuracy  precision
-  63  3.999      1  0.305413  0.429020  2.379814 -0.761779  -0.000976
-  64  3.999      2  0.306242  0.430313  2.387125 -0.754468   0.006335
-  65  3.999      3  0.305628  0.429620  2.393247 -0.748345   0.012458
-  66  3.999      4  0.304745  0.428685  2.389969 -0.751623   0.009180
-  67  3.999      5  0.305512  0.429292  2.385865 -0.755728   0.005076
-  /tmp/ipykernel_2966984/1857574883.py:4: SettingWithCopyWarning: 
+        time  trial        m0        m1     phase  accuracy  precision
+  135  3.999      1  0.364449  0.318936  3.722584  0.580992   0.029979
+  136  3.999      2  0.365353  0.314348  3.685926  0.544333  -0.006680
+  137  3.999      3  0.361278  0.314820  3.690810  0.549218  -0.001795
+  138  3.999      4  0.363572  0.315568  3.700796  0.559204   0.008191
+  139  3.999      5  0.364761  0.320093  3.639834  0.498242  -0.052771
+  /tmp/ipykernel_3718977/1857574883.py:4: SettingWithCopyWarning: 
   A value is trying to be set on a copy of a slice from a DataFrame.
   Try using .loc[row_indexer,col_indexer] = value instead
 
   See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
     end_point['accuracy'] = end_point.phase - stim_phase
-  /tmp/ipykernel_2966984/1857574883.py:5: SettingWithCopyWarning: 
+  /tmp/ipykernel_3718977/1857574883.py:5: SettingWithCopyWarning: 
   A value is trying to be set on a copy of a slice from a DataFrame.
   Try using .loc[row_indexer,col_indexer] = value instead
 
@@ -1040,4 +1036,4 @@ from src.analysis.decode import decode_bump
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/7ebef37e9d33cbff0298800444b68f12b1c8b0b9.png]]
+[[file:./.ob-jupyter/4b114fa93c95418d96d6689c7f7d2e312ee3bc36.png]]

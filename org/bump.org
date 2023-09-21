@@ -21,6 +21,9 @@
 : /home/leon/mambaforge/envs/dual_data/bin/python
 
 * Continuous Bump Attractor Model
+
+Here I will explain how to use the package to run a one population continuous attractor network model.
+
 ** imports
 #+begin_src ipython
   import sys
@@ -887,9 +890,9 @@ from src.analysis.decode import decode_bump
 : 0  2.596293  10.528442 -5.977084        0  0.499  0.0
 : 1  1.005097   4.559610 -5.977084        1  0.499  0.0
 : 2  3.421589  -1.393433 -5.977084        2  0.499  0.0
-: 3  2.504058  -1.709201 -5.977084        3  0.499  0.0
 : 4  2.531308  -2.055951 -5.977084        4  0.499  0.0
 
+: 3  2.504058  -1.709201 -5.977084        3  0.499  0.0
 
 #+begin_src ipython
   res = df.groupby(['time', 'J1'])['rates'].apply(decode_bump).reset_index()
