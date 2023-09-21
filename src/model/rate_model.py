@@ -176,7 +176,9 @@ class Network:
             print("Tuning, KAPPA", self.KAPPA.flatten())
             print("Asymmetry, SIGMA", self.SIGMA.flatten())
         
+        # self.KAPPA = self.KAPPA / np.abs(self.Jab)
         self.SIGMA = self.SIGMA / np.abs(self.Jab)
+        
         self.Jab *= self.GAIN
         
         if self.IF_NMDA:
@@ -368,7 +370,7 @@ class Network:
                     theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
 
     def generate_Cij(self):
-        """ Generate the connectivity matrix Cij according to the specific regulation rules."""
+        """Generate the connectivity matrix Cij according to the specific regulation rules."""
         np.random.seed(self.SEED)
         
         Cij = np.zeros((self.N, self.N), dtype=np.float64)
@@ -386,13 +388,17 @@ class Network:
                     self.PHASE,
                     self.VERBOSE,
                 )
+                
                 Cij[
                     self.csumNa[i_post] : self.csumNa[i_post + 1],
                     self.csumNa[j_pre] : self.csumNa[j_pre + 1],
                 ] = Cab
 
-        self.Cij = Cij
+        return Cij
 
+
+    def Jab_times_Cij(self, Cij):
+        """Multiply Cij with Jab."""
         for i_post in range(self.N_POP):
             for j_pre in range(self.N_POP):
                 Cij[
@@ -405,9 +411,9 @@ class Network:
                     ]
                     * self.Jab[i_post][j_pre]
                 )
-
+        
         return Cij
-
+        
     def generate_Cij_NMDA(self, Cij):
         """Modify the connectivity matrix when NMDA receptors are active."""
         Cij_NMDA = np.zeros((self.N, self.Na[0]), dtype=np.float64)
@@ -507,7 +513,7 @@ class Network:
     def run(self):
         """Perform the simulation for a series of steps within the specified duration."""
         start = perf_counter()
-            
+        
         if self.IF_LOAD_MAT:
             print('Loading matrix from', self.MAT_PATH + "Cij.npy")
             Cij = np.load(self.MAT_PATH + "Cij.npy")
@@ -518,10 +524,12 @@ class Network:
             if self.IF_SAVE_MAT:
                 print('Saving matrix to', self.MAT_PATH + "Cij.npy")
                 np.save(self.MAT_PATH + "Cij.npy", Cij)
+
+        Cij = self.Jab_times_Cij(Cij)
         
         if self.IF_NMDA:
             Cij_NMDA = np.ascontiguousarray(self.generate_Cij_NMDA(Cij))
-        
+            
         np.random.seed(None)
         
         if self.IF_STP:

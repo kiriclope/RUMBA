@@ -1180,7 +1180,7 @@ def bump_I0(filename, config, n_sim=250):
 
         cim = my_boots_ci(m1_list, np.nanmean, n_samples=1000)
         cip = my_boots_ci(phase_list, np.nanvar, n_samples=1000)
-
+        
         # print(len(cim), len(cip))
 
         m1_ci.append(cim)

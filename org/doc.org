@@ -3,6 +3,7 @@
 #+PROPERTY: header-args:ipython :results both :exports both :async yes :session dual_data :kernel dual_data
 
 * notebook settings
+
 #+begin_src ipython
   %load_ext autoreload
   %autoreload 2
@@ -415,6 +416,49 @@ from src.analysis.decode import decode_bump
 
 #+RESULTS:
 [[file:./.ob-jupyter/7ebef37e9d33cbff0298800444b68f12b1c8b0b9.png]]
+
+** Parameter Search
+*** Changing J0
+
+#+begin_src ipython
+  REPO_ROOT = "/home/leon/tmp/rnn_numba"
+
+  J0_list = np.linspace(1, 3, 11)
+  print(J0_list)
+#+end_src
+
+#+RESULTS:
+: [1.  1.2 1.4 1.6 1.8 2.  2.2 2.4 2.6 2.8 3. ]
+
+#+begin_src ipython
+  
+  IF_LOAD_MAT = 0
+  IF_SAVE_MAT = 1
+
+  for J0 in J0_list:
+      print('##########################################')
+      print("J0", J0)
+      print('##########################################')
+
+      model = Network('config_bump.yml', 'bump_J0_%.1f' % J0, REPO_ROOT,
+                      IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
+                      Jab=[-J0])
+
+      model.run()
+
+      IF_LOAD_MAT = 1
+      IF_SAVE_MAT = 0
+
+#+end_src
+
+#+RESULTS:
+: ##########################################
+: J0 1.0
+: ##########################################
+: Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+: Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_J0_1.0.h5
+: Generating matrix Cij
+
 
 * Balanced EI Bump Attractor Model
 ** imports
