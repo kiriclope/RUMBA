@@ -17,17 +17,26 @@ def nd_numpy_to_nested(X, N_POP=2, IF_STP=0):
     pandas DataFrame
     """
     df_list = []
-    
+
     if IF_STP:
         if N_POP == 2:
             variables = ["rates", "ff", "h_E", "h_I", "u_stp", "x_stp", "A_stp"]
-        else:
+        elif N_POP==1:
             variables = ["rates", "ff", "h_E", "u_stp", "x_stp", "A_stp"]
+        else:
+            variables = ["rates", "ff"]
+            for i in range(1, N_POP+1):
+                variables.append(f"h_{i}")
+            variables += ["u_stp", "x_stp", "A_stp"]
     else:
         if N_POP == 2:
             variables = ["rates", "ff", "h_E", "h_I"]
-        else:
+        elif N_POP==1:
             variables = ["rates", "ff", "h_E"]
+        else:
+            variables = ["rates", "ff"]
+            for i in range(1, N_POP+1):
+                variables.append(f"h_{i}")
 
     idx = np.arange(0, X.shape[1], 1)
     
