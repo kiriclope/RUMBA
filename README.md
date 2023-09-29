@@ -1,4 +1,4 @@
-# RNN Simulator with NUMBA
+# RUMBA a RNN Simulator with NUMBA
 
 ## Introduction
 This package provides an implementation of a recurrent neural network simulator with NUMBA.
