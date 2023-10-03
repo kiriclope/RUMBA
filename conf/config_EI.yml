@@ -24,7 +24,7 @@ T_WINDOW: .250
 ##########################################
 # Parameters for the stimulus presentation
 ##########################################
-# stimulus as a cosine shape
+# stimulus has a cosine shape
 # time for stimulus onset in s 
 T_STIM_ON: 2.0
 # time for stimulus offset in s 

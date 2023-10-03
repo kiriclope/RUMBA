@@ -30,13 +30,13 @@ def numba_update_ff_inputs(
         ff_inputs = ff_inputs * EXP_DT_TAU_FF[0]
         ff_inputs = ff_inputs + DT_TAU_FF[0] * ff_inputs_0
     elif FF_DYN == 2:
-        ff_inputs[:] = (
+        ff_inputs = (
             np.sqrt(VAR_FF[0]) * np.random.normal(0, 1.0, ff_inputs.shape[0])
             + ff_inputs_0
         )
     else:
         ff_inputs = ff_inputs_0
-
+    
     return ff_inputs
 
 
@@ -74,11 +74,11 @@ def numba_update_rates(
     RATE_DYN=0,
     IF_NMDA=0,
 ):
-    net_inputs = ff_inputs
     
+    net_inputs = ff_inputs    
     for i_pop in range(inputs.shape[0]):
         net_inputs = net_inputs + inputs[i_pop]
-
+    
     if IF_NMDA:
         for i_pop in range(inputs.shape[0]):
             net_inputs = net_inputs + inputs_NMDA[i_pop]

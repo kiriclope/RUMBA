@@ -67,7 +67,7 @@ class Network:
 
         self.EXP_DT_TAU_THRESH = []
         self.DT_TAU_THRESH = []
-
+        
         for i_pop in range(self.N_POP):
             self.EXP_DT_TAU_SYN.append(np.exp(-self.DT / self.TAU_SYN[i_pop]))
             self.DT_TAU_SYN.append(self.DT / self.TAU_SYN[i_pop])
@@ -263,7 +263,7 @@ class Network:
         self.ff_inputs = np.zeros((self.N,), dtype=np.float64)
         self.ff_inputs_0 = np.ones((self.N,), dtype=np.float64)
         self.thresh = np.ones((self.N,), dtype=np.float64)
-
+        
         for i_pop in range(self.N_POP):
             self.ff_inputs_0[self.csumNa[i_pop] : self.csumNa[i_pop + 1]] = (
                 self.ff_inputs_0[self.csumNa[i_pop] : self.csumNa[i_pop + 1]]
@@ -273,7 +273,7 @@ class Network:
                 self.thresh[self.csumNa[i_pop] : self.csumNa[i_pop + 1]]
                 * self.THRESH[i_pop]
             )
-
+    
     def print_params(self):
         """Print the parameters of the Network."""
         print("Parameters:")
@@ -306,7 +306,8 @@ class Network:
             )
 
     def perturb_inputs(self, step):
-        """Perturb the inputs based on the simulus parameters.""" 
+        """Perturb the inputs based on the simulus parameters."""
+        
         if step == 0:
             for i in range(self.N_POP):
                 if self.BUMP_SWITCH[i]:
@@ -319,39 +320,32 @@ class Network:
                 if self.BUMP_SWITCH[i]:
                     self.ff_inputs_0[self.csumNa[i] : self.csumNa[i + 1]] = self.Iext[i]
                     
-        if step == self.N_STIM_ON:
-            if self.VERBOSE and np.any(self.I0!=0):
+        if step == self.N_STIM_ON and np.any(self.I0!=0):
+            if self.VERBOSE:
                 print("STIM ON")
+                
             for i_pop in range(self.N_POP):
-                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
+                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop], endpoint=False)
                 self.ff_inputs_0[
                     self.csumNa[i_pop] : self.csumNa[i_pop + 1]
                 ] = self.ff_inputs_0[
                     self.csumNa[i_pop] : self.csumNa[i_pop + 1]
                 ] + pertur_func(
                     theta, self.I0[i_pop], self.SIGMA0, self.PHI0)
-
-        if step == self.N_STIM_OFF:
-            if self.VERBOSE and np.any(self.I0!=0):
+        
+        if step == self.N_STIM_OFF and np.any(self.I0!=0):
+            if self.VERBOSE:
                 print("STIM OFF")
                 
             for i_pop in range(self.N_POP):
-                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
-                self.ff_inputs_0[
-                    self.csumNa[i_pop] : self.csumNa[i_pop + 1]
-                ] = self.ff_inputs_0[
-                    self.csumNa[i_pop] : self.csumNa[i_pop + 1]
-                ] - pertur_func(
-                    theta, self.I0[i_pop], self.SIGMA0, self.PHI0)
-
-        if step == self.N_STIM_OFF and np.any(self.I0!=0):
-            self.ff_inputs_0[self.csumNa[0] : self.csumNa[1]] = self.Iext[0]
-
-        if step == self.N_CUE_ON:
-            if self.VERBOSE and np.any(self.I1!=0):
+                self.ff_inputs_0[self.csumNa[i_pop] : self.csumNa[i_pop+1]] = self.Iext[i_pop]
+        
+        if step == self.N_CUE_ON and np.any(self.I1!=0):
+            if self.VERBOSE:
                 print("CUE ON")
+                
             for i_pop in range(self.N_POP):
-                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
+                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop], endpoint=False)
                 self.ff_inputs_0[
                     self.csumNa[i_pop] : self.csumNa[i_pop + 1]
                 ] = self.ff_inputs_0[
@@ -359,18 +353,14 @@ class Network:
                 ] + pertur_func(
                     theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
 
-        if step == self.N_CUE_OFF:
-            if self.VERBOSE and np.any(self.I1!=0) :
+        if step == self.N_CUE_OFF and np.any(self.I1!=0):
+            if self.VERBOSE:
                 print("CUE OFF")
+                
             for i_pop in range(self.N_POP):
-                theta = np.linspace(0.0, 2.0 * np.pi, self.Na[i_pop])
-                self.ff_inputs_0[
-                    self.csumNa[i_pop] : self.csumNa[i_pop + 1]
-                ] = self.ff_inputs_0[
-                    self.csumNa[i_pop] : self.csumNa[i_pop + 1]
-                ] - pertur_func(
-                    theta, self.I1[i_pop], self.SIGMA0, self.PHI1)
+                self.ff_inputs_0[self.csumNa[i_pop] : self.csumNa[i_pop+1]] = self.Iext[i_pop]
 
+    
     def generate_Cij(self):
         """Generate the connectivity matrix Cij according to the specific regulation rules."""
         np.random.seed(self.SEED)
@@ -388,14 +378,14 @@ class Network:
                     self.KAPPA[i_post, j_pre],
                     self.SEED,
                     self.PHASE,
-                    self.VERBOSE,
+                    verbose=self.VERBOSE,
                 )
                 
                 Cij[
                     self.csumNa[i_post] : self.csumNa[i_post + 1],
                     self.csumNa[j_pre] : self.csumNa[j_pre + 1],
                 ] = Cab
-
+        
         return Cij
 
 
@@ -489,7 +479,7 @@ class Network:
         print(
             "m1", np.round(amplitudes, 2),
             "phase", np.round(phases, 2),
-            flush=True,                            
+            flush=True,              
         )
 
 
@@ -527,6 +517,8 @@ class Network:
                 print('Saving matrix to', self.MAT_PATH + "Cij.npy")
                 np.save(self.MAT_PATH + "Cij.npy", Cij)
 
+        self.Cij = Cij
+        
         Cij = self.Jab_times_Cij(Cij)
         
         if self.IF_NMDA:
@@ -554,6 +546,8 @@ class Network:
         # for step in tqdm(range(self.N_STEPS)):
             self.perturb_inputs(step)
 
+            np.random.seed(None)
+            
             self.ff_inputs = numba_update_ff_inputs(
                 self.ff_inputs,
                 self.ff_inputs_0,
@@ -647,6 +641,5 @@ if __name__ == "__main__":
     start = perf_counter()
     model.run()
     end = perf_counter()
-
+    
     print("Elapsed (with compilation) = {}s".format((end - start)))
-

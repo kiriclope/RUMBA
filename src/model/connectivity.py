@@ -51,17 +51,17 @@ def theta_mat(theta, phi):
         Matrix based on the absolute difference between each pair of elements in 'theta' and 'phi'.
     """
     
-    theta_mat = np.zeros((phi.shape[0], theta.shape[0]))
+    theta_ij = np.zeros((phi.shape[0], theta.shape[0]))
 
-    twopi = np.float64(2.0 * np.pi)
-
+    # twopi = np.float64(2.0 * np.pi)
+    
     for i in range(phi.shape[0]):
         for j in range(theta.shape[0]):
-            # theta_mat[i, j] = phi[i] - theta[j]
-            dtheta = np.abs(phi[i] - theta[j])
-            theta_mat[i, j] = np.minimum(dtheta, twopi - dtheta)
-
-    return theta_mat
+            theta_ij[i, j] = phi[i] - theta[j]
+            # dtheta = np.abs(phi[i] - theta[j])
+            # theta_ij[i, j] = np.minimum(dtheta, twopi - dtheta)
+    
+    return theta_ij
 
 
 @jit(nopython=True, parallel=False, fastmath=True, cache=True)
@@ -80,14 +80,14 @@ def strided_method(ar):
         Strided array.
     """
     
-    a = np.concatenate((ar, ar[1:]))
+    arr = np.concatenate((ar, ar[1:]))
     L = len(ar)
-    n = a.strides[0]
-    return np.lib.stride_tricks.as_strided(a[L-1:], (L, L), (-n, n))
+    n = arr.strides[0]
+    return np.lib.stride_tricks.as_strided(arr[L-1:], (L, L), (-n, n))
 
 
 @jit(nopython=True, parallel=True, fastmath=True, cache=True)
-def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=0, PHASE=0, verbose=0):
+def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=0.0, KAPPA=0.5, SEED=0, PHASE=0, verbose=0):
     """
     Generate matrix Cij based on given parameters.
 
@@ -120,11 +120,15 @@ def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=
     if 'cos' in STRUCTURE:
         
         Pij = np.zeros((Na, Nb), dtype=np.float64)
-        
-        theta = np.linspace(0.0, 2.0 * np.pi, Nb)
-        phi = np.linspace(0.0, 2.0 * np.pi, Na)        
 
+        theta = np.arange(0, 2.0 * np.pi, 2.0 * np.pi / Nb)
+        phi = np.arange(0, 2.0 * np.pi, 2.0 * np.pi / Na)
+        
+        # theta = np.linspace(0.0, 2.0 * np.pi, Nb, endpoint=False)
+        # phi = np.linspace(0.0, 2.0 * np.pi, Na, endpoint=False)
+        
         theta_ij = theta_mat(theta, phi)
+        # cos_ij = np.cos(theta_ij)
         cos_ij = np.cos(theta_ij - PHASE)
         
         Pij[:, :] = cos_ij
@@ -139,14 +143,14 @@ def numba_generate_Cab(Kb, Na, Nb, STRUCTURE='None', SIGMA=1.0, KAPPA=0.5, SEED=
                 print('with cosine structure')
                 
             Cij[:, :] = (1.0 + 2.0 * Pij) / Nb
-
+            
             if SIGMA>0.0:
                 if verbose:
                     print('with asymmetry')
-                Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb            
+                Cij[:, :] =  Cij + SIGMA * numba_normal((Nb, Nb), SEED) / Nb
         else:
             Cij[:, :] = 1.0 / Nb
-
+    
     else:
         if verbose:
             print('sparse connectivity')

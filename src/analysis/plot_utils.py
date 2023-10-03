@@ -7,8 +7,8 @@ import seaborn as sns
 from joblib import Parallel, delayed
 from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.offsetbox import AnchoredText
-from rate_numba.analysis.decode import circcvl, decode_bump
-from rate_numba.stats.my_bootstrap import my_boots_ci
+from src.analysis.decode import circcvl, decode_bump
+from src.stats.my_bootstrap import my_boots_ci
 from scipy.ndimage.filters import gaussian_filter
 from scipy.stats import f_oneway
 from yaml import safe_load
@@ -90,7 +90,8 @@ def get_df(filename, configname="config_bump"):
 
 
 def plot_con(Cij):
-    fig = plt.figure(figsize=(13, 13))
+    fig = plt.figure(figsize=(6, 6))
+    
     gs = fig.add_gridspec(
         2,
         2,
@@ -108,7 +109,7 @@ def plot_con(Cij):
     ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
     ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
     ax_xy = fig.add_subplot(gs[0, 1])
-
+    
     ax.imshow(Cij, cmap="jet", aspect=1)
     ax.set_xlabel("Presynaptic")
     ax.set_ylabel("Postsynaptic")
