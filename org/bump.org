@@ -694,6 +694,294 @@ Here, during stimulation and during the delay period:
   Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_294.h5
   Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
   Running simulation
+  Elapsed (with compilation) = 8.208216740007629s
+  ##########################################
+  trial 295
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_295.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.162994533005985s
+  ##########################################
+  trial 296
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_296.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.139126588997897s
+  ##########################################
+  trial 297
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_297.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.169178285999806s
+  ##########################################
+  trial 298
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_298.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.194237331001204s
+  ##########################################
+  trial 299
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_299.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.240931656007888s
+  ##########################################
+  trial 300
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_300.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.170987033008714s
+  ##########################################
+  trial 301
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_301.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.171041833003983s
+  ##########################################
+  trial 302
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_302.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.12759244600602s
+  ##########################################
+  trial 303
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_303.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.1443281610118s
+  ##########################################
+  trial 304
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_304.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.135234865010716s
+  ##########################################
+  trial 305
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_305.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.174543030996574s
+  ##########################################
+  trial 306
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_306.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.181218634999823s
+  ##########################################
+  trial 307
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_307.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.195213512997725s
+  ##########################################
+  trial 308
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_308.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.191215615996043s
+  ##########################################
+  trial 309
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_309.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.163886034002644s
+  ##########################################
+  trial 310
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_310.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.179045411990955s
+  ##########################################
+  trial 311
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_311.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.181000145996222s
+  ##########################################
+  trial 312
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_312.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.181163542991271s
+  ##########################################
+  trial 313
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_313.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.13108811598795s
+  ##########################################
+  trial 314
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_314.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.079842150007607s
+  ##########################################
+  trial 315
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_315.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.154915641003754s
+  ##########################################
+  trial 316
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_316.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.15955255899462s
+  ##########################################
+  trial 317
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_317.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.176803277005092s
+  ##########################################
+  trial 318
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_318.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.225846243993146s
+  ##########################################
+  trial 319
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_319.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.138479775007s
+  ##########################################
+  trial 320
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_320.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.203124656007276s
+  ##########################################
+  trial 321
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_321.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.155910560002667s
+  ##########################################
+  trial 322
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_322.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.164287400999456s
+  ##########################################
+  trial 323
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_323.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.182818072993541s
+  ##########################################
+  trial 324
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_324.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.127244727991638s
+  ##########################################
+  trial 325
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_325.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.19828046800103s
+  ##########################################
+  trial 326
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_326.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.178404103993671s
+  ##########################################
+  trial 327
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_327.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.153297825003392s
+  ##########################################
+  trial 328
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_328.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.213972221012227s
+  ##########################################
+  trial 329
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_329.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
+  Elapsed (with compilation) = 8.175851915002568s
+  ##########################################
+  trial 330
+  ##########################################
+  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+  Saving data to /home/leon/tmp/rnn_numba/data/simul/bump_ini_330.h5
+  Loading matrix from /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+  Running simulation
 #+end_example
 
 **** NB on
