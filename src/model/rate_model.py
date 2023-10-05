@@ -5,6 +5,9 @@ processing details (perturbation functions, threshold dynamics, etc.)
 that are user-configurable via a configuration file (conf_file). The
 outputs can be saved in an HDF5 file."""
 
+import warnings
+from numba import NumbaPerformanceWarning
+
 import sys
 import os
 from time import perf_counter
@@ -27,6 +30,8 @@ from src.model.plasticity import STP_Model
 
 from src.analysis.decode import decode_bump
 from src.model.mean_field_spec import get_mf_spec, m0_func
+
+warnings.filterwarnings("ignore", category=NumbaPerformanceWarning)
 
 
 def pertur_func(theta, I0, SIGMA0, PHI0):

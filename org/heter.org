@@ -4021,7 +4021,7 @@ Running an heterogeneous attractor for different cues
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/84bdfec2d1894da045d0a7f396535df7ea19998b.png]]
+[[file:./.ob-jupyter/b72baf99ba73ee75cdc9d6553c6f3859d0fc7f43.png]]
 
 **** Endpoint Errors
 
