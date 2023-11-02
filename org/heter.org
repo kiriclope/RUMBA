@@ -1,6 +1,7 @@
 #+STARTUP: fold
 #+TITLE: Heterogeneous Bump Attractor Model
-#+PROPERTY: header-args:ipython :results both :exports both :async yes :session dual_data :kernel dual_data
+# #+PROPERTY: header-args:ipython :results both :exports both :async yes :session dual_data :kernel dual_data
+#+PROPERTY: header-args:ipython :results both :exports both :async yes :session /ssh:172.26.20.46:~/.local/share/jupyter/runtime/kernel-343f5c4f-82fe-4da8-aa26-6dafafa92f96.json :kernel dual_data
 
 * Notebook Settings
 
@@ -8,8 +9,8 @@
   %load_ext autoreload
   %autoreload 2
   %reload_ext autoreload
-
-  %run ../notebooks/setup.py
+  
+  %run /home/leon/models/lif_cpp/notebooks/setup.py
   %matplotlib inline
   %config InlineBackend.figure_format = 'png'
 #+end_src
@@ -44,24 +45,25 @@
 **** Parameters
 #+begin_src ipython
   REPO_ROOT = "/home/leon/tmp/rnn_numba"  
-  sigma_list = np.linspace(0, 15, 16)
+  # sigma_list = np.linspace(0, 15, 16)
+  sigma_list = [0]
   print(sigma_list)
 #+end_src
 
 #+RESULTS:
-: [ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14. 15.]
+: [0]
 **** Run 
 #+begin_src ipython
   IF_LOAD_MAT = 0
   IF_SAVE_MAT = 1
-  
+
   n_ini = 1
   for sigma in sigma_list:
       for ini in range(n_ini):
           model = Network('config_bump.yml', 'heter_%.1f_ini_%d' % (sigma, ini), REPO_ROOT,
                           IF_LOAD_MAT=IF_LOAD_MAT, IF_SAVE_MAT=IF_SAVE_MAT,
                           SIGMA=[sigma], VERBOSE=0, DURATION=20)
-
+          
           model.run()
 
           IF_LOAD_MAT = 1
@@ -72,104 +74,12 @@
 #+end_src
 
 #+RESULTS:
-#+begin_example
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_0.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.90143269998953s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_1.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.792799561982974s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_2.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 31.519761382136494s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_3.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.018415339058265s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_4.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.60792920179665s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_5.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.549306866014376s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_6.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.51413784082979s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_7.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.46777896396816s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_8.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.35326339304447s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_9.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.270423328038305s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_10.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.54869905090891s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_11.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.48883868800476s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_12.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.53324777493253s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_13.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.779910415178165s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_14.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.48945266311057s
-  Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
-  Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_15.0_ini_0.h5
-  Generating matrix Cij
-  Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
-  Running simulation
-  Elapsed (with compilation) = 32.56913532502949s
-#+end_example
+: Loading config from /home/leon/tmp/rnn_numba/conf/config_bump.yml
+: Saving data to /home/leon/tmp/rnn_numba/data/simul/heter_0.0_ini_0.h5
+: Generating matrix Cij
+: Saving matrix to /home/leon/tmp/rnn_numba/data/matrix/Cij.npy
+: Running simulation
+: Elapsed (with compilation) = 37.852242523338646s
 
 *** Analysis
 **** Load data
@@ -4063,7 +3973,7 @@ Running an heterogeneous attractor for different cues
   2802  45.0  5.863342  5.464292  5.302165  4.516767  -0.164057
   2803  45.0  5.878384  5.395009  5.295063  4.509665  -0.171159
   2804  45.0  5.890250  5.550475  5.657196  4.871797   0.190974
-  /tmp/ipykernel_903376/2257008132.py:8: FutureWarning: Not prepending group keys to the result index of transform-like apply. In the future, the group keys will be included in the index, regardless of whether the applied function returns a like-indexed object.
+  /tmp/ipykernel_1740768/2257008132.py:8: FutureWarning: Not prepending group keys to the result index of transform-like apply. In the future, the group keys will be included in the index, regardless of whether the applied function returns a like-indexed object.
   To preserve the previous behavior, use
 
   	>>> .groupby(..., group_keys=False)
@@ -4072,7 +3982,7 @@ Running an heterogeneous attractor for different cues
 
   	>>> .groupby(..., group_keys=True)
     end_point['precision'] = end_point.groupby('PHI0')['phase'].apply(get_precision)
-  /tmp/ipykernel_903376/2257008132.py:11: FutureWarning: Not prepending group keys to the result index of transform-like apply. In the future, the group keys will be included in the index, regardless of whether the applied function returns a like-indexed object.
+  /tmp/ipykernel_1740768/2257008132.py:11: FutureWarning: Not prepending group keys to the result index of transform-like apply. In the future, the group keys will be included in the index, regardless of whether the applied function returns a like-indexed object.
   To preserve the previous behavior, use
 
   	>>> .groupby(..., group_keys=False)
@@ -4098,8 +4008,8 @@ Running an heterogeneous attractor for different cues
   ax[1].set_ylabel('Count')
   ax[1].set_xticks([0, 90, 180, 270, 360])
 
-  sns.histplot(data=end_point, x=end_point['precision']*180/np.pi, legend=False, ax=ax[2], bins='auto', kde=True)
-  sns.histplot(data=end_point_heter, x=end_point_heter['precision']*180/np.pi, legend=False, ax=ax[2], bins='auto', kde=True)
+  sns.histplot(data=end_point, x=end_point['precision']*180/np.pi, legend=False, ax=ax[2], bins='auto', kde=True, stat='density')
+  sns.histplot(data=end_point_heter, x=end_point_heter['precision']*180/np.pi, legend=False, ax=ax[2], bins='auto', kde=True, stat='density')
   ax[2].set_xlabel('$\phi - <\phi>_{trials}$ (°)')
   ax[2].set_ylabel('$Count$')
   ax[2].set_xlim([-25, 25])
@@ -4108,7 +4018,7 @@ Running an heterogeneous attractor for different cues
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/c9deb85670e97308df404568a93272663ffb750a.png]]
+[[file:./.ob-jupyter/89b47324f193d83e9e7584475183dc33c4db1b60.png]]
 
 ** Changing J0
 *** Simulations
